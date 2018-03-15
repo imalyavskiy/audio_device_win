@@ -158,6 +158,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="AudioDeviceBuffer.h" />
+    <ClInclude Include="AudioDeviceBufferInterface.h" />
     <ClInclude Include="AudioDeviceModule.h" />
     <ClInclude Include="AudioDeviceWindowsCore.h" />
     <ClInclude Include="AudioDeviceGeneric.h" />
@@ -168,6 +169,7 @@
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="AudioDeviceBuffer.cpp" />
     <ClCompile Include="AudioDeviceWindowsCore.cpp" />
     <ClCompile Include="AudioDeviceGeneric.cpp" />
     <ClCompile Include="AudioSynth.cpp" />

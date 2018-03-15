@@ -32,9 +32,4 @@ private:
     CriticalSection* _cs;
 };
 
-namespace rtc
-{
-    using CritScope = AutoLock;
-}
-
 #endif // __CRITICAL_SECTION_H__

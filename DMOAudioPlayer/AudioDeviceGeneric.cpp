@@ -1,5 +1,5 @@
 #include "stdafx.h"
-#include "AudioDeviceBuffer.h"
+#include "AudioDeviceBufferInterface.h"
 #include "AudioDeviceGeneric.h"
 
 /*
@@ -15,35 +15,32 @@
 //#include "modules/audio_device/audio_device_generic.h"
 //#include "rtc_base/logging.h"
 
-namespace webrtc {
+bool AudioDeviceGeneric::BuiltInAECIsAvailable() const {
+    LOG_ERROR( L"Not supported on this platform");
+    return false;
+}
 
-    bool AudioDeviceGeneric::BuiltInAECIsAvailable() const {
-        RTC_LOG(LS_ERROR << L"Not supported on this platform");
-        return false;
-    }
+int32_t AudioDeviceGeneric::EnableBuiltInAEC(bool enable) {
+    LOG_ERROR( L"Not supported on this platform");
+    return -1;
+}
 
-    int32_t AudioDeviceGeneric::EnableBuiltInAEC(bool enable) {
-        RTC_LOG(LS_ERROR << L"Not supported on this platform");
-        return -1;
-    }
+bool AudioDeviceGeneric::BuiltInAGCIsAvailable() const {
+    LOG_ERROR( L"Not supported on this platform");
+    return false;
+}
 
-    bool AudioDeviceGeneric::BuiltInAGCIsAvailable() const {
-        RTC_LOG(LS_ERROR << L"Not supported on this platform");
-        return false;
-    }
+int32_t AudioDeviceGeneric::EnableBuiltInAGC(bool enable) {
+    LOG_ERROR( L"Not supported on this platform");
+    return -1;
+}
 
-    int32_t AudioDeviceGeneric::EnableBuiltInAGC(bool enable) {
-        RTC_LOG(LS_ERROR << L"Not supported on this platform");
-        return -1;
-    }
+bool AudioDeviceGeneric::BuiltInNSIsAvailable() const {
+    LOG_ERROR( L"Not supported on this platform");
+    return false;
+}
 
-    bool AudioDeviceGeneric::BuiltInNSIsAvailable() const {
-        RTC_LOG(LS_ERROR << L"Not supported on this platform");
-        return false;
-    }
-
-    int32_t AudioDeviceGeneric::EnableBuiltInNS(bool enable) {
-        RTC_LOG(LS_ERROR << L"Not supported on this platform");
-        return -1;
-    }
-}  // namespace webrtc
+int32_t AudioDeviceGeneric::EnableBuiltInNS(bool enable) {
+    LOG_ERROR( L"Not supported on this platform");
+    return -1;
+}

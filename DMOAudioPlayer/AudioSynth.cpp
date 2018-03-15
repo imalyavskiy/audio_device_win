@@ -393,7 +393,7 @@ HRESULT CAudioSynth::get_Frequency(int *pFrequency)
 
     *pFrequency = m_iFrequency;
 
-    RTC_LOG(LS_VERBOSE << L"get_Frequency: " << *pFrequency);
+    LOG_VERBOSE( L"get_Frequency: " << *pFrequency);
     return NOERROR;
 }
 
@@ -403,7 +403,7 @@ HRESULT CAudioSynth::put_Frequency(int Frequency)
 
     m_iFrequency = Frequency;
 
-    RTC_LOG(LS_VERBOSE << L"put_Frequency: " << Frequency);
+    LOG_VERBOSE( L"put_Frequency: " << Frequency);
     return NOERROR;
 }
 
@@ -413,7 +413,7 @@ HRESULT CAudioSynth::get_Waveform(int *pWaveform)
         return E_POINTER;
     *pWaveform = m_iWaveform;
 
-    RTC_LOG(LS_VERBOSE << L"get_Waveform: %d" << *pWaveform );
+    LOG_VERBOSE( L"get_Waveform: %d" << *pWaveform );
     return NOERROR;
 }
 
@@ -423,7 +423,7 @@ HRESULT CAudioSynth::put_Waveform(int Waveform)
 
     m_iWaveform = Waveform;
 
-    RTC_LOG(LS_VERBOSE << L"put_Waveform: " << Waveform);
+    LOG_VERBOSE( L"put_Waveform: " << Waveform);
     return NOERROR;
 }
 
@@ -434,7 +434,7 @@ HRESULT CAudioSynth::get_Channels(int *pChannels)
 
     *pChannels = m_wChannels;
 
-    RTC_LOG(LS_VERBOSE << L"get_Channels: %d" << *pChannels);
+    LOG_VERBOSE( L"get_Channels: %d" << *pChannels);
     return NOERROR;
 }
 
@@ -453,7 +453,7 @@ HRESULT CAudioSynth::get_BitsPerSample(int *pBitsPerSample)
 
     *pBitsPerSample = m_wBitsPerSample;
 
-    RTC_LOG(LS_VERBOSE << L"get_BitsPerSample: %d" << *pBitsPerSample);
+    LOG_VERBOSE( L"get_BitsPerSample: %d" << *pBitsPerSample);
     return NOERROR;
 }
 
@@ -472,7 +472,7 @@ HRESULT CAudioSynth::get_SamplesPerSec(int *pSamplesPerSec)
 
     *pSamplesPerSec = m_dwSamplesPerSec;
 
-    RTC_LOG(LS_VERBOSE << L"get_SamplesPerSec: %d" << *pSamplesPerSec);
+    LOG_VERBOSE( L"get_SamplesPerSec: %d" << *pSamplesPerSec);
     return NOERROR;
 }
 
@@ -492,7 +492,7 @@ HRESULT CAudioSynth::put_SynthFormat(int Channels, int BitsPerSample, int Sample
     m_wBitsPerSample = (WORD)BitsPerSample;
     m_dwSamplesPerSec = SamplesPerSec;
 
-    RTC_LOG(LS_VERBOSE << L"put_SynthFormat: " << BitsPerSample << "-bit " << Channels << "-channel " << SamplesPerSec << "Hz");
+    LOG_VERBOSE( L"put_SynthFormat: " << BitsPerSample << "-bit " << Channels << "-channel " << SamplesPerSec << "Hz");
 
     return NOERROR;
 }
@@ -504,7 +504,7 @@ HRESULT CAudioSynth::get_Amplitude(int *pAmplitude)
 
     *pAmplitude = m_iAmplitude;
 
-    RTC_LOG(LS_VERBOSE << L"get_Amplitude: %d" << *pAmplitude);
+    LOG_VERBOSE( L"get_Amplitude: %d" << *pAmplitude);
     return NOERROR;
 }
 
@@ -517,7 +517,7 @@ HRESULT CAudioSynth::put_Amplitude(int Amplitude)
 
     m_iAmplitude = Amplitude;
 
-    RTC_LOG(LS_VERBOSE << L"put_Amplitude: %d" << Amplitude);
+    LOG_VERBOSE( L"put_Amplitude: %d" << Amplitude);
     return NOERROR;
 }
 
@@ -532,7 +532,7 @@ HRESULT CAudioSynth::get_SweepRange(int *pSweepStart, int *pSweepEnd)
     *pSweepStart = m_iSweepStart;
     *pSweepEnd = m_iSweepEnd;
 
-    RTC_LOG(LS_VERBOSE << L"get_SweepStart: " << *pSweepStart << " " << *pSweepEnd);
+    LOG_VERBOSE( L"get_SweepStart: " << *pSweepStart << " " << *pSweepEnd);
     return NOERROR;
 }
 
@@ -543,7 +543,7 @@ HRESULT CAudioSynth::put_SweepRange(int SweepStart, int SweepEnd)
     m_iSweepStart = SweepStart;
     m_iSweepEnd = SweepEnd;
 
-    RTC_LOG(LS_VERBOSE << L"put_SweepRange: " << SweepStart << " " << SweepEnd);
+    LOG_VERBOSE( L"put_SweepRange: " << SweepStart << " " << SweepEnd);
     return NOERROR;
 }
 
