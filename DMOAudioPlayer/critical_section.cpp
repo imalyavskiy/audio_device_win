@@ -28,6 +28,12 @@ CriticalSection::Leave()
     LeaveCriticalSection(_pcs);
 }
 
+HANDLE
+CriticalSection::CurrentOwner()
+{
+    return _pcs->OwningThread;
+}
+
 AutoLock::AutoLock(CriticalSection* cs)
     : _cs(cs)
 {

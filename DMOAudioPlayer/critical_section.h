@@ -14,6 +14,8 @@ struct CriticalSection
 
     void Leave();
 
+    HANDLE CurrentOwner();
+
 private:
     CRITICAL_SECTION * _pcs;
 };

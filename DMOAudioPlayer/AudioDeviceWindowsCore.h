@@ -59,8 +59,8 @@ namespace webrtc
         // Device enumeration
         virtual int16_t PlayoutDevices();
         virtual int16_t RecordingDevices();
-        virtual int32_t PlayoutDeviceName(const uint16_t index, std::string& name, std::string& guid) override;
-        virtual int32_t RecordingDeviceName(uint16_t index, char name[kAdmMaxDeviceNameSize], char guid[kAdmMaxGuidSize]);
+        virtual int32_t PlayoutDeviceName(const uint16_t index, std::wstring& name, std::wstring& guid) override;
+        virtual int32_t RecordingDeviceName(const uint16_t index, std::wstring& name, std::wstring& guid) override;
 
         // Device selection
         virtual int32_t SetPlayoutDevice(uint16_t index);
