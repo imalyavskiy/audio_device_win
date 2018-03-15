@@ -574,7 +574,7 @@ namespace webrtc
     //  AttachAudioBuffer
     // ----------------------------------------------------------------------------
 
-    void AudioDeviceWindowsCore::AttachAudioBuffer(AudioDeviceBuffer* audioBuffer) {
+    void AudioDeviceWindowsCore::AttachAudioBuffer(AudioDeviceBufferInterface* audioBuffer) {
         m_ptrAudioBuffer = audioBuffer;
 
         // Inform the AudioBuffer about default settings for this implementation.

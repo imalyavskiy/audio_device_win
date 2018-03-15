@@ -128,7 +128,7 @@ namespace webrtc
         virtual int32_t EnableBuiltInAEC(bool enable);
 
     public:
-        virtual void AttachAudioBuffer(AudioDeviceBuffer* audioBuffer);
+        virtual void AttachAudioBuffer(AudioDeviceBufferInterface* audioBuffer);
 
     private:
         bool KeyPressed() const;
@@ -185,7 +185,7 @@ namespace webrtc
         int32_t InitRecordingDMO();
 
         ScopedCOMInitializer                    m_comInit;
-        AudioDeviceBuffer*                      m_ptrAudioBuffer;
+        AudioDeviceBufferInterface*                      m_ptrAudioBuffer;
 
         mutable CriticalSection                 m_critSect;
         mutable CriticalSection                 m_volumeMutex;

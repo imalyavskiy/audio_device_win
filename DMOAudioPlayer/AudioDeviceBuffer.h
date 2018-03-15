@@ -10,7 +10,7 @@ namespace webrtc {
     // TODO(henrika): remove when no longer used by external client.
     const size_t kMaxBufferSizeBytes = 3840;  // 10ms in stereo @ 96kHz
 
-    class AudioDeviceBuffer {
+    class AudioDeviceBufferInterface {
     public:
         virtual int32_t  SetRecordingSampleRate(uint32_t fsHz) = 0;
         virtual int32_t  SetPlayoutSampleRate(uint32_t fsHz) = 0;

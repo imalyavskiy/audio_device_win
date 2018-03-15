@@ -113,7 +113,7 @@ namespace webrtc {
         virtual int GetRecordAudioParameters(AudioParameters* params) const;
 #endif  // WEBRTC_IOS
 
-        virtual void AttachAudioBuffer(AudioDeviceBuffer* audioBuffer) = 0;
+        virtual void AttachAudioBuffer(AudioDeviceBufferInterface* audioBuffer) = 0;
 
         virtual ~AudioDeviceGeneric() {}
     };
