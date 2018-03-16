@@ -61,6 +61,84 @@ void SetCurrentThreadName(const char* name)
     }
 }
 
+bool PrintWAVEFORMTAEX(const WAVEFORMATEX& wfe, const std::wstring prefix)
+{
+    if (wfe.wFormatTag != WAVE_FORMAT_PCM)
+        return false;
+
+    LOG_INFO(prefix << L"wFormatTag     : 0x" << std::hex << wfe.wFormatTag << std::dec << L" (" << wfe.wFormatTag << L")");
+    // number of channels (i.e. mono, stereo...)
+    LOG_INFO(prefix << L"nChannels      : " << wfe.nChannels);
+    // sample rate
+    LOG_INFO(prefix << L"nSamplesPerSec : " << wfe.nSamplesPerSec);
+    // for buffer estimation
+    LOG_INFO(prefix << L"nAvgBytesPerSec: " << wfe.nAvgBytesPerSec);
+    // block size of data
+    LOG_INFO(prefix << L"nBlockAlign    : " << wfe.nBlockAlign);
+    // number of bits per sample of mono data
+    LOG_INFO(prefix << L"wBitsPerSample : " << wfe.wBitsPerSample);
+    LOG_INFO(prefix << L"cbSize         : " << wfe.cbSize);
+
+    return true;
+}
+
+bool PrintWAVEFORMTAEXTENSIBLE(const WAVEFORMATEXTENSIBLE& wfe, const std::wstring prefix)
+{
+    if (wfe.Format.wFormatTag != WAVE_FORMAT_EXTENSIBLE)
+        return false;
+
+    LOG_INFO(prefix << L"Format.wFormatTag            : 0x" << std::hex << wfe.Format.wFormatTag << std::dec << L" (" << wfe.Format.wFormatTag << L")");
+    // number of channels (i.e. mono, stereo...)
+    LOG_INFO(prefix << L"Format.nChannels             : " << wfe.Format.nChannels);
+    // sample rate
+    LOG_INFO(prefix << L"Format.nSamplesPerSec        : " << wfe.Format.nSamplesPerSec);
+    // for buffer estimation
+    LOG_INFO(prefix << L"Format.nAvgBytesPerSec       : " << wfe.Format.nAvgBytesPerSec);
+    // block size of data
+    LOG_INFO(prefix << L"Format.nBlockAlign           : " << wfe.Format.nBlockAlign);
+    // number of bits per sample of mono data
+    LOG_INFO(prefix << L"Format.wBitsPerSample        : " << wfe.Format.wBitsPerSample);
+    // extra data size
+    LOG_INFO(prefix << L"Format.cbSize                : " << wfe.Format.cbSize);
+
+    if (0 == wfe.Format.wBitsPerSample)
+    {
+        LOG_INFO(prefix << L"Samples.wSamplesPerBlock     : " << wfe.Samples.wSamplesPerBlock);
+    }
+    else
+    if(wfe.Format.wBitsPerSample >= wfe.Samples.wValidBitsPerSample)
+    {
+        LOG_INFO(prefix << L"Samples.wValidBitsPerSample  : " << wfe.Samples.wValidBitsPerSample);
+    }
+    else
+    {
+        LOG_INFO(prefix << L"Samples.wReserved            : " << wfe.Samples.wReserved);
+    }
+    std::bitset<32> mask(wfe.dwChannelMask);
+
+    LOG_INFO(prefix << L"dwChannelMask                : " << mask << "b");
+
+    LOG_INFO(prefix << L"SubFormat                    : " << std::hex
+                                                         << std::setw(8) << std::setfill(L'0') << static_cast<long>(wfe.SubFormat.Data1)
+                                                         << "-"
+                                                         << std::setw(4) << std::setfill(L'0') << static_cast<short>(wfe.SubFormat.Data2) 
+                                                         << "-"
+                                                         << std::setw(4) << std::setfill(L'0') << static_cast<short>(wfe.SubFormat.Data3)
+                                                         << '-'
+                                                         << std::setw(2) << std::setfill(L'0') << wfe.SubFormat.Data4[0] 
+                                                         << std::setw(2) << std::setfill(L'0') << wfe.SubFormat.Data4[1] 
+                                                         << '-'
+                                                         << std::setw(2) << std::setfill(L'0') << wfe.SubFormat.Data4[2]
+                                                         << std::setw(2) << std::setfill(L'0') << wfe.SubFormat.Data4[3]
+                                                         << std::setw(2) << std::setfill(L'0') << wfe.SubFormat.Data4[4]
+                                                         << std::setw(2) << std::setfill(L'0') << wfe.SubFormat.Data4[5]
+                                                         << std::setw(2) << std::setfill(L'0') << wfe.SubFormat.Data4[6]
+                                                         << std::setw(2) << std::setfill(L'0') << wfe.SubFormat.Data4[7]
+                                                         << std::resetiosflags(std::ios_base::basefield));
+
+    return true;
+}
+
 namespace 
 {
 
@@ -371,7 +449,7 @@ AudioDeviceWindowsCore::CoreAudioIsSupported()
 
 AudioDeviceWindowsCore::AudioDeviceWindowsCore()
     : m_comInit(ScopedCOMInitializer::kMTA)
-    , m_ptrAudioBuffer(NULL)
+    , m_ptrPlayoutAudioBuffer(NULL)
     , m_ptrEnumerator(NULL)
     , m_ptrRenderCollection(NULL)
     , m_ptrCaptureCollection(NULL)
@@ -456,12 +534,12 @@ AudioDeviceWindowsCore::AudioDeviceWindowsCore()
     // system automatically sets the state to nonsignaled. If no threads are
     // waiting, the event object's state remains signaled. (Except for
     // _hShutdownCaptureEvent, which is used to shutdown multiple threads).
-    m_hRenderSamplesReadyEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
+    m_hRenderSamplesReadyEvent  = CreateEvent(NULL, FALSE, FALSE, NULL);
     m_hCaptureSamplesReadyEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
-    m_hShutdownRenderEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
-    m_hShutdownCaptureEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
-    m_hRenderStartedEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
-    m_hCaptureStartedEvent = CreateEvent(NULL, FALSE, FALSE, NULL);
+    m_hShutdownRenderEvent      = CreateEvent(NULL, FALSE, FALSE, NULL);
+    m_hShutdownCaptureEvent     = CreateEvent(NULL, TRUE, FALSE, NULL);
+    m_hRenderStartedEvent       = CreateEvent(NULL, FALSE, FALSE, NULL);
+    m_hCaptureStartedEvent      = CreateEvent(NULL, FALSE, FALSE, NULL);
 
     m_perfCounterFreq.QuadPart = 1;
     m_perfCounterFactor = 0.0;
@@ -517,7 +595,7 @@ AudioDeviceWindowsCore::~AudioDeviceWindowsCore()
     // it here and not in Terminate() since we don't recreate it in Init().
     m_ptrEnumerator.Release();
 
-    m_ptrAudioBuffer = NULL;
+    m_ptrPlayoutAudioBuffer.reset();
 
     if (NULL != m_hRenderSamplesReadyEvent) {
         CloseHandle(m_hRenderSamplesReadyEvent);
@@ -569,17 +647,25 @@ AudioDeviceWindowsCore::~AudioDeviceWindowsCore()
 //  AttachAudioBuffer
 // ----------------------------------------------------------------------------
 
-void AudioDeviceWindowsCore::AttachAudioBuffer(AudioDeviceBufferInterface::ptr& audioBuffer) 
+void AudioDeviceWindowsCore::AttachAudioBuffers(AudioDevicePlayoutBufferInterface::ptr outBuffer, AudioDeviceRecordingBufferInterface::ptr inBuffer)
 {
-    m_ptrAudioBuffer = audioBuffer;
-
     // Inform the AudioBuffer about default settings for this implementation.
     // Set all values to zero here since the actual settings will be done by
     // InitPlayout and InitRecording later.
-    m_ptrAudioBuffer->SetRecordingSampleRate(0);
-    m_ptrAudioBuffer->SetPlayoutSampleRate(0);
-    m_ptrAudioBuffer->SetRecordingChannels(0);
-    m_ptrAudioBuffer->SetPlayoutChannels(0);
+
+    if(m_ptrPlayoutAudioBuffer = outBuffer)
+    {
+        m_ptrPlayoutAudioBuffer->SetPlayoutSampleRate(0);
+        m_ptrPlayoutAudioBuffer->SetPlayoutChannels(0);
+        m_ptrPlayoutAudioBuffer->SetPlayoutFrameSize(0);
+    }
+
+    if(m_ptrRecordingAudioBuffer = inBuffer)
+    {
+        m_ptrRecordingAudioBuffer->SetRecordingSampleRate(0);
+        m_ptrRecordingAudioBuffer->SetRecordingChannels(0);
+        m_ptrRecordingAudioBuffer->SetRecordingFrameSize(0);
+    }
 }
 
 // ----------------------------------------------------------------------------
@@ -596,7 +682,7 @@ int32_t AudioDeviceWindowsCore::ActiveAudioLayer(AudioDeviceModule::AudioLayer& 
 //  Init
 // ----------------------------------------------------------------------------
 
-AudioDeviceGeneric::InitStatus 
+AudioDeviceGenericInterface::InitStatus 
 AudioDeviceWindowsCore::Init() 
 {
     AutoLock lock(&m_critSect);
@@ -1790,19 +1876,11 @@ int32_t AudioDeviceWindowsCore::InitPlayout()
         if (SUCCEEDED(hr))
         {
             LOG_INFO( L"Audio Engine's current rendering mix format:");
-            // format type
-            LOG_INFO( L"\twFormatTag     : 0x" << std::hex << pWfxOut->wFormatTag << std::dec << L" (" << pWfxOut->wFormatTag << L")");
-            // number of channels (i.e. mono, stereo...)
-            LOG_INFO( L"\tnChannels      : " << pWfxOut->nChannels);
-            // sample rate
-            LOG_INFO( L"\tnSamplesPerSec : " << pWfxOut->nSamplesPerSec);
-            // for buffer estimation
-            LOG_INFO( L"\tnAvgBytesPerSec: " << pWfxOut->nAvgBytesPerSec);
-            // block size of data
-            LOG_INFO( L"\tnBlockAlign    : " << pWfxOut->nBlockAlign);
-            // number of bits per sample of mono data
-            LOG_INFO( L"\twBitsPerSample : " << pWfxOut->wBitsPerSample);
-            LOG_INFO( L"\tcbSize         : " << pWfxOut->cbSize);
+            
+            if (!PrintWAVEFORMTAEX(*pWfxOut, L"\t"))
+                if (!PrintWAVEFORMTAEXTENSIBLE(*reinterpret_cast<WAVEFORMATEXTENSIBLE*>(pWfxOut), L"\t"))
+                    LOG_ERROR(L" Unsupported format tag : " << std::hex << pWfxOut->wFormatTag << std::dec);
+
         }
 
         // Set wave format
@@ -1855,7 +1933,7 @@ int32_t AudioDeviceWindowsCore::InitPlayout()
         //   Is _ptrClientOut->Initialize expected to fail?
         //   Same in InitRecording().
         if (hr == S_OK) {
-            m_playAudioFrameSize    = Wfx.nBlockAlign;
+            m_playAudioFrameSize    = Wfx.nBlockAlign; // == Wfx.nChannels * Wfx.Format.wBitsPerSample / 8
             m_playBlockSize         = Wfx.nSamplesPerSec / 100;
             m_playSampleRate        = Wfx.nSamplesPerSec;
             m_devicePlaySampleRate  = Wfx.nSamplesPerSec;       // The device itself continues to run at 44.1 kHz.
@@ -1863,13 +1941,9 @@ int32_t AudioDeviceWindowsCore::InitPlayout()
             m_playChannels          = Wfx.nChannels;
 
             LOG_INFO( L"VoE selected this rendering format:");
-            LOG_INFO( L"\twFormatTag         : 0x" << std::hex << Wfx.wFormatTag << std::dec << L" (" << Wfx.wFormatTag << L")");
-            LOG_INFO( L"\tnChannels          : "   << Wfx.nChannels);
-            LOG_INFO( L"\tnSamplesPerSec     : "   << Wfx.nSamplesPerSec);
-            LOG_INFO( L"\tnAvgBytesPerSec    : "   << Wfx.nAvgBytesPerSec);
-            LOG_INFO( L"\tnBlockAlign        : "   << Wfx.nBlockAlign);
-            LOG_INFO( L"\twBitsPerSample     : "   << Wfx.wBitsPerSample);
-            LOG_INFO( L"\tcbSize             : "   << Wfx.cbSize);
+
+            PrintWAVEFORMTAEX(*pWfxOut, L"\t");
+
             LOG_INFO( L"\tAdditional settings:");
             LOG_INFO( L"\t\t_playAudioFrameSize: " << m_playAudioFrameSize);
             LOG_INFO( L"\t\t_playBlockSize     : " << m_playBlockSize);
@@ -1920,10 +1994,9 @@ int32_t AudioDeviceWindowsCore::InitPlayout()
         if (FAILED(hr))
             break;
 
-        if (m_ptrAudioBuffer) {
+        if (m_ptrPlayoutAudioBuffer) {
             // Update the audio buffer with the selected parameters
-            m_ptrAudioBuffer->SetPlayoutSampleRate(m_playSampleRate);
-            m_ptrAudioBuffer->SetPlayoutChannels((uint8_t)m_playChannels);
+            m_ptrPlayoutAudioBuffer->SetPlayoutPCMFormat(m_playSampleRate, (uint8_t)m_playChannels, 8 * m_playAudioFrameSize / m_playChannels);
         }
         else {
             // We can enter this state during CoreAudioIsSupported() when no
@@ -2026,10 +2099,10 @@ int32_t AudioDeviceWindowsCore::InitRecordingDMO()
         return -1;
     }
 
-    if (m_ptrAudioBuffer) 
+    if (m_ptrRecordingAudioBuffer) 
     {
-        m_ptrAudioBuffer->SetRecordingSampleRate(m_recSampleRate);
-        m_ptrAudioBuffer->SetRecordingChannels(m_recChannels);
+        m_ptrRecordingAudioBuffer->SetRecordingSampleRate(m_recSampleRate);
+        m_ptrRecordingAudioBuffer->SetRecordingChannels(m_recChannels);
     }
     else 
     {
@@ -2225,11 +2298,12 @@ int32_t AudioDeviceWindowsCore::InitRecording()
         if (FAILED(hr))
             break;
 
-        if (m_ptrAudioBuffer) 
+        if (m_ptrRecordingAudioBuffer)
         {
             // Update the audio buffer with the selected parameters
-            m_ptrAudioBuffer->SetRecordingSampleRate(m_recSampleRate);
-            m_ptrAudioBuffer->SetRecordingChannels((uint8_t)m_recChannels);
+            m_ptrRecordingAudioBuffer->SetRecordingSampleRate(m_recSampleRate);
+            m_ptrRecordingAudioBuffer->SetRecordingChannels((uint8_t)m_recChannels);
+            m_ptrRecordingAudioBuffer->SetRecordingFrameSize((uint8_t)m_recAudioFrameSize);
         }
         else 
         {
@@ -2772,12 +2846,12 @@ DWORD AudioDeviceWindowsCore::DoRenderThread()
                     if (FAILED(err))
                         throw err;
 
-                    if (m_ptrAudioBuffer)
+                    if (m_ptrPlayoutAudioBuffer)
                     {
                         // Request data to be played out (#bytes =
                         // _playBlockSize*_audioFrameSize)
                         _UnLock();
-                        int32_t nSamples = m_ptrAudioBuffer->RequestPlayoutData(m_playBlockSize);
+                        int32_t nSamples = m_ptrPlayoutAudioBuffer->RequestPlayoutData(m_playBlockSize);
                         _Lock();
 
                         if (nSamples == -1) 
@@ -2800,7 +2874,7 @@ DWORD AudioDeviceWindowsCore::DoRenderThread()
                             LOG_WARNING( L"nSamples(" << nSamples << L") != _playBlockSize" << m_playBlockSize << L")");
 
                         // Get the actual (stored) data
-                        nSamples = m_ptrAudioBuffer->GetPlayoutData((int8_t*)pData);
+                        nSamples = m_ptrPlayoutAudioBuffer->GetPlayoutData((int8_t*)pData);
                     }
 
                     DWORD dwFlags(0);
@@ -3003,12 +3077,11 @@ DWORD AudioDeviceWindowsCore::DoCaptureThreadPollDMO()
                 // we fail to call it frequently enough.
                 assert(kSamplesProduced == static_cast<int>(m_recBlockSize));
                 assert(sizeof(BYTE) == sizeof(int8_t));
-                m_ptrAudioBuffer->SetRecordedBuffer(reinterpret_cast<int8_t*>(data),
-                    kSamplesProduced);
-                m_ptrAudioBuffer->SetVQEData(0, 0);
+                m_ptrRecordingAudioBuffer->SetRecordedBuffer(reinterpret_cast<int8_t*>(data), kSamplesProduced);
+                m_ptrRecordingAudioBuffer->SetVQEData(0, 0);
 
                 _UnLock();  // Release lock while making the callback.
-                m_ptrAudioBuffer->DeliverRecordedData();
+                m_ptrRecordingAudioBuffer->DeliverRecordedData();
                 _Lock();
             }
 
@@ -3240,14 +3313,14 @@ DWORD AudioDeviceWindowsCore::DoCaptureThread()
 
                     while (syncBufIndex >= m_recBlockSize)
                     {
-                        if (m_ptrAudioBuffer)
+                        if (m_ptrPlayoutAudioBuffer)
                         {
-                            m_ptrAudioBuffer->SetRecordedBuffer(syncBuffer.get(), m_recBlockSize);
-                            m_ptrAudioBuffer->SetVQEData(sndCardPlayDelay, sndCardRecDelay);
-                            m_ptrAudioBuffer->SetTypingStatus(KeyPressed());
+                            m_ptrRecordingAudioBuffer->SetRecordedBuffer(syncBuffer.get(), m_recBlockSize);
+                            m_ptrRecordingAudioBuffer->SetVQEData(sndCardPlayDelay, sndCardRecDelay);
+                            m_ptrRecordingAudioBuffer->SetTypingStatus(KeyPressed());
 
                             _UnLock();  // release lock while making the callback
-                            m_ptrAudioBuffer->DeliverRecordedData();
+                            m_ptrRecordingAudioBuffer->DeliverRecordedData();
                             _Lock();  // restore the lock
 
                                         // Sanity check to ensure that essential states are not modified

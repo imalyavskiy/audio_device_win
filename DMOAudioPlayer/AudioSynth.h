@@ -2,7 +2,8 @@
 #define __AUDIO_SYNTH_H__
 #pragma once
 
-enum Waveforms {
+enum class Waveforms 
+{
     WAVE_SINE = 0,
     WAVE_SQUARE,
     WAVE_SAWTOOTH,
@@ -26,6 +27,11 @@ enum SYNTH_OUTPUT_FORMAT
 #define WAVE_FORMAT_ADPCM       0x0002
 #endif
 
+#ifndef WAVE_FORMAT_EXTENSIBLE
+#define WAVE_FORMAT_EXTENSIBLE  0xFFFE
+#endif
+
+
 const double TWOPI = 6.283185308;
 const int DefaultFrequency = 440;       // A-440
 const int MaxAmplitude = 100;
@@ -34,33 +40,31 @@ const int DefaultSweepStart = DefaultFrequency;
 const int DefaultSweepEnd = 5000;
 
 // Class that synthesizes waveforms
-class CAudioSynth {
+class AudioSynth {
 public:
 
-    CAudioSynth(
+    AudioSynth(
         CriticalSection* pStateLock,
-        int Frequency = DefaultFrequency,
-        int Waveform = WAVE_SINE,
-        int iBitsPerSample = 8,
-        int iChannels = 1,
-        int iSamplesPerSec = 11025,
-        int iAmplitude = 100
+        int Frequency       = DefaultFrequency,
+        Waveforms Waveform  = Waveforms::WAVE_SINE,
+        int iBitsPerSample  = 8,
+        int iChannels       = 1,
+        int iSamplesPerSec  = 11025,
+        int iAmplitude      = 100
     );
 
-    ~CAudioSynth();
+    ~AudioSynth();
 
     // Load the buffer with the current waveform
-    void FillPCMAudioBuffer(const WAVEFORMATEX& wfex, BYTE pBuf[], int iSize);
+    void FillPCMAudioBuffer(/*const WAVEFORMATEX& wfex, */BYTE pBuf[], int iSize);
 
     // Set the "current" format and allocate temporary memory
-    HRESULT AllocWaveCache(const WAVEFORMATEX& wfex);
-
-    void GetPCMFormatStructure(WAVEFORMATEX* pwfex);
+    HRESULT AllocWaveCache(/*const WAVEFORMATEX& wfex*/);
 
     HRESULT get_Frequency(int *Frequency);
     HRESULT put_Frequency(int  Frequency);
-    HRESULT get_Waveform(int *Waveform);
-    HRESULT put_Waveform(int  Waveform);
+    HRESULT get_Waveform(Waveforms &waveForm) const;
+    HRESULT put_Waveform(Waveforms waveform);
     HRESULT get_Channels(int *Channels);
     HRESULT put_Channels(int Channels);
     HRESULT get_BitsPerSample(int *BitsPerSample);
@@ -84,11 +88,11 @@ private:
     WORD  m_wBitsPerSample;     // The number of bits in each sample.  This member is only valid if the
                                 // current format is PCM audio.
 
-    int m_iWaveform;            // WAVE_SINE ...
+    Waveforms m_iWaveform;            // WAVE_SINE ...
     int m_iFrequency;           // if not using sweep, this is the frequency
     int m_iAmplitude;           // 0 to 100
 
-    int m_iWaveformLast;        // keep track of the last known format
+    Waveforms m_iWaveformLast;        // keep track of the last known format
     int m_iFrequencyLast;       // so we can flush the cache if necessary
     int m_iAmplitudeLast;
     int m_iCurrentSample;       // 0 to iSamplesPerSec-1
@@ -103,11 +107,11 @@ private:
     int m_iSweepStart;          // start of sweep
     int m_iSweepEnd;            // end of sweep
 
-    void CalcCache(const WAVEFORMATEX& wfex);
-    void CalcCacheSine(const WAVEFORMATEX& wfex);
-    void CalcCacheSquare(const WAVEFORMATEX& wfex);
-    void CalcCacheSawtooth(const WAVEFORMATEX& wfex);
-    void CalcCacheSweep(const WAVEFORMATEX& wfex);
+    void CalcCache(/*const WAVEFORMATEX& wfex*/);
+    void CalcCacheSine(/*const WAVEFORMATEX& wfex*/);
+    void CalcCacheSquare(/*const WAVEFORMATEX& wfex*/);
+    void CalcCacheSawtooth(/*const WAVEFORMATEX& wfex*/);
+    void CalcCacheSweep(/*const WAVEFORMATEX& wfex*/);
 };
 
 #endif // __AUDIO_SYNTH_H__

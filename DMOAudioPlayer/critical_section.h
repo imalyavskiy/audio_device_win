@@ -14,10 +14,11 @@ struct CriticalSection
 
     void Leave();
 
-    HANDLE CurrentOwner();
+    DWORD CurrentOwnerId();
 
 private:
     CRITICAL_SECTION * _pcs;
+    DWORD owner;
 };
 
 struct AutoLock

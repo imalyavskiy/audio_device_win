@@ -15,32 +15,17 @@
 //#include "modules/audio_device/audio_device_generic.h"
 //#include "rtc_base/logging.h"
 
-bool AudioDeviceGeneric::BuiltInAECIsAvailable() const {
-    LOG_ERROR( L"Not supported on this platform");
-    return false;
-}
-
-int32_t AudioDeviceGeneric::EnableBuiltInAEC(bool enable) {
+int32_t AudioDeviceGenericInterface::EnableBuiltInAEC(bool enable) {
     LOG_ERROR( L"Not supported on this platform");
     return -1;
 }
 
-bool AudioDeviceGeneric::BuiltInAGCIsAvailable() const {
-    LOG_ERROR( L"Not supported on this platform");
-    return false;
-}
-
-int32_t AudioDeviceGeneric::EnableBuiltInAGC(bool enable) {
+int32_t AudioDeviceGenericInterface::EnableBuiltInAGC(bool enable) {
     LOG_ERROR( L"Not supported on this platform");
     return -1;
 }
 
-bool AudioDeviceGeneric::BuiltInNSIsAvailable() const {
-    LOG_ERROR( L"Not supported on this platform");
-    return false;
-}
-
-int32_t AudioDeviceGeneric::EnableBuiltInNS(bool enable) {
+int32_t AudioDeviceGenericInterface::EnableBuiltInNS(bool enable) {
     LOG_ERROR( L"Not supported on this platform");
     return -1;
 }

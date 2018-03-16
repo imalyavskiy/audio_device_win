@@ -2,10 +2,6 @@
 #define __DEVICE_H__
 #pragma once
 
-#if (_MSC_VER >= 1400)  // only include for VS 2005 and higher
-
-//#include "modules/audio_device/audio_device_generic.h"
-
 #include <wmcodecdsp.h>      // CLSID_CWMAudioAEC
 // (must be before audioclient.h)
 #include <Audioclient.h>     // WASAPI
@@ -35,7 +31,9 @@ const float     MIN_CORE_MICROPHONE_VOLUME          = 0.0f;
 const uint16_t  CORE_SPEAKER_VOLUME_STEP_SIZE       = 1;
 const uint16_t  CORE_MICROPHONE_VOLUME_STEP_SIZE    = 1;
 
-class AudioDeviceWindowsCore : public AudioDeviceGeneric
+class AudioDeviceWindowsCore 
+    : public AudioDevicePlayoutInterface
+    , public AudioDeviceRecordingInterface
 {
 public:
     AudioDeviceWindowsCore();
@@ -123,7 +121,7 @@ public:
     virtual int32_t EnableBuiltInAEC(bool enable) override;
 
 public:
-    virtual void AttachAudioBuffer(AudioDeviceBufferInterface::ptr& audioBuffer) override;
+    virtual void AttachAudioBuffers(AudioDevicePlayoutBufferInterface::ptr outBuffer, AudioDeviceRecordingBufferInterface::ptr inBuffer) override;
 
 private:
     bool KeyPressed() const;
@@ -180,7 +178,8 @@ private:    // thread functions
 
     ScopedCOMInitializer                    m_comInit;
 
-    AudioDeviceBufferInterface::ptr         m_ptrAudioBuffer;
+    AudioDevicePlayoutBufferInterface::ptr   m_ptrPlayoutAudioBuffer;
+    AudioDeviceRecordingBufferInterface::ptr m_ptrRecordingAudioBuffer;
 
     mutable CriticalSection                 m_critSect;
     mutable CriticalSection                 m_volumeMutex;
@@ -258,7 +257,7 @@ private:
     mutable char                            m_str[512];
 };
 
-#endif    // #if (_MSC_VER >= 1400)
+
 
 
 #endif // __DEVICE_H__

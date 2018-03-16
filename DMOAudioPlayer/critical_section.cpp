@@ -20,18 +20,20 @@ void
 CriticalSection::Enter()
 {
     EnterCriticalSection(_pcs);
+    owner = GetCurrentThreadId();
 }
 
 void 
 CriticalSection::Leave()
 {
     LeaveCriticalSection(_pcs);
+    owner = DWORD(-1);
 }
 
-HANDLE
-CriticalSection::CurrentOwner()
+DWORD
+CriticalSection::CurrentOwnerId()
 {
-    return _pcs->OwningThread;
+    return owner;
 }
 
 AutoLock::AutoLock(CriticalSection* cs)

@@ -3,40 +3,36 @@
 #include "AudioSynth.h"
 
 const DWORD BITS_PER_BYTE = 8;
+#ifndef _WIN32_WINNT// as 0x0502
+#error
+#endif
 
 BOOL WINAPI CritCheckIn(CriticalSection * pcCrit)
-{
-    return (GetCurrentThreadId() == GetThreadId(pcCrit->CurrentOwner()));
+{   
+    DWORD owner = pcCrit->CurrentOwnerId();
+    DWORD current = GetCurrentThreadId();
+    return (current == owner);
 }
 
-CAudioSynth::CAudioSynth(CriticalSection* pStateLock,
-    int Frequency,
-    int Waveform,
-    int iBitsPerSample,
-    int iChannels,
-    int iSamplesPerSec,
-    int iAmplitude
-)
+AudioSynth::AudioSynth(CriticalSection* pStateLock, int Frequency, Waveforms Waveform, int iBitsPerSample, int iChannels, int iSamplesPerSec, int iAmplitude )
     : m_bWaveCache(NULL)
     , m_wWaveCache(NULL)
     , m_pStateLock(pStateLock)
+    , m_iFrequency(Frequency)
+    , m_iWaveform(Waveform)
+    , m_iAmplitude(iAmplitude)
+    , m_iSweepStart(DefaultSweepStart)
+    , m_iSweepEnd(DefaultSweepEnd)
+    , m_wFormatTag(WAVE_FORMAT_PCM)
+    , m_wBitsPerSample((WORD)iBitsPerSample)
+    , m_wChannels((WORD)iChannels)
+    , m_dwSamplesPerSec(iSamplesPerSec)
 {
-    assert(Waveform >= WAVE_SINE);
-    assert(Waveform < WAVE_LAST);
-
-    m_iFrequency = Frequency;
-    m_iWaveform = Waveform;
-    m_iAmplitude = iAmplitude;
-    m_iSweepStart = DefaultSweepStart;
-    m_iSweepEnd = DefaultSweepEnd;
-
-    m_wFormatTag = WAVE_FORMAT_PCM;
-    m_wBitsPerSample = (WORD)iBitsPerSample;
-    m_wChannels = (WORD)iChannels;
-    m_dwSamplesPerSec = iSamplesPerSec;
+    assert(Waveform >= Waveforms::WAVE_SINE);
+    assert(Waveform < Waveforms::WAVE_LAST);
 }
 
-CAudioSynth::~CAudioSynth()
+AudioSynth::~AudioSynth()
 {
     if (m_bWaveCache)
         delete[] m_bWaveCache;
@@ -45,7 +41,7 @@ CAudioSynth::~CAudioSynth()
         delete[] m_wWaveCache;
 }
 
-HRESULT CAudioSynth::AllocWaveCache(const WAVEFORMATEX& wfex)
+HRESULT AudioSynth::AllocWaveCache(/*const WAVEFORMATEX& wfex*/)
 {
     // The caller should hold the state lock because this
     // function uses m_iWaveCacheCycles, m_iWaveCacheSize
@@ -55,7 +51,7 @@ HRESULT CAudioSynth::AllocWaveCache(const WAVEFORMATEX& wfex)
     assert(CritCheckIn(m_pStateLock));
 
     m_iWaveCacheCycles = m_iFrequency;
-    m_iWaveCacheSize = (int)wfex.nSamplesPerSec;
+    m_iWaveCacheSize = (int)m_dwSamplesPerSec/*wfex.nSamplesPerSec*/;
 
     if (m_bWaveCache)
     {
@@ -70,7 +66,7 @@ HRESULT CAudioSynth::AllocWaveCache(const WAVEFORMATEX& wfex)
     }
 
     // The wave cache always stores PCM audio data.
-    if (wfex.wBitsPerSample == 8)
+    if (m_wBitsPerSample/*wfex.wBitsPerSample*/ == 8)
     {
         m_bWaveCache = new BYTE[m_iWaveCacheSize];
         if (NULL == m_bWaveCache)
@@ -83,37 +79,12 @@ HRESULT CAudioSynth::AllocWaveCache(const WAVEFORMATEX& wfex)
             return E_OUTOFMEMORY;
     }
 
-    CalcCache(wfex);
+    CalcCache(/*wfex*/);
 
     return S_OK;
 }
 
-void CAudioSynth::GetPCMFormatStructure(WAVEFORMATEX* pwfex)
-{
-    assert(pwfex);
-    if (!pwfex)
-        return;
-
-    // The caller must hold the state lock because this function uses
-    // m_wChannels, m_wBitsPerSample and m_dwSamplesPerSec.
-    assert(CritCheckIn(m_pStateLock));
-
-    // Check for valid input parametes.
-    assert((1 == m_wChannels) || (2 == m_wChannels));
-    assert((8 == m_wBitsPerSample) || (16 == m_wBitsPerSample));
-    assert((8000 == m_dwSamplesPerSec) || (11025 == m_dwSamplesPerSec) ||
-        (22050 == m_dwSamplesPerSec) || (44100 == m_dwSamplesPerSec));
-
-    pwfex->wFormatTag = WAVE_FORMAT_PCM;
-    pwfex->nChannels = m_wChannels;
-    pwfex->nSamplesPerSec = m_dwSamplesPerSec;
-    pwfex->wBitsPerSample = m_wBitsPerSample;
-    pwfex->nBlockAlign = (WORD)((pwfex->wBitsPerSample * pwfex->nChannels) / BITS_PER_BYTE);
-    pwfex->nAvgBytesPerSec = pwfex->nBlockAlign * pwfex->nSamplesPerSec;
-    pwfex->cbSize = 0;
-}
-
-void CAudioSynth::FillPCMAudioBuffer(const WAVEFORMATEX& wfex, BYTE pBuf[], int iSize)
+void AudioSynth::FillPCMAudioBuffer(/*const WAVEFORMATEX& wfex, */BYTE pBuf[], int iSize)
 {
     BOOL fCalcCache = FALSE;
 
@@ -143,11 +114,11 @@ void CAudioSynth::FillPCMAudioBuffer(const WAVEFORMATEX& wfex, BYTE pBuf[], int 
 
     if (fCalcCache)
     {
-        CalcCache(wfex);
+        CalcCache(/*wfex*/);
     }
 
     // Copy cache to output buffers
-    if (wfex.wBitsPerSample == 8 && wfex.nChannels == 1)
+    if (m_dwSamplesPerSec/*wfex.nSamplesPerSec*/ == 8 && m_wChannels/*wfex.nChannels*/ == 1)
     {
         while (iSize--)
         {
@@ -156,7 +127,7 @@ void CAudioSynth::FillPCMAudioBuffer(const WAVEFORMATEX& wfex, BYTE pBuf[], int 
                 m_iWaveCacheIndex = 0;
         }
     }
-    else if (wfex.wBitsPerSample == 8 && wfex.nChannels == 2)
+    else if (m_dwSamplesPerSec/*wfex.nSamplesPerSec*/ == 8 && m_wChannels/*wfex.nChannels*/ == 2)
     {
         iSize /= 2;
 
@@ -168,7 +139,7 @@ void CAudioSynth::FillPCMAudioBuffer(const WAVEFORMATEX& wfex, BYTE pBuf[], int 
                 m_iWaveCacheIndex = 0;
         }
     }
-    else if (wfex.wBitsPerSample == 16 && wfex.nChannels == 1)
+    else if (m_dwSamplesPerSec/*wfex.nSamplesPerSec*/ == 16 && m_wChannels/*wfex.nChannels*/ == 1)
     {
         WORD * pW = (WORD *)pBuf;
         iSize /= 2;
@@ -180,7 +151,7 @@ void CAudioSynth::FillPCMAudioBuffer(const WAVEFORMATEX& wfex, BYTE pBuf[], int 
                 m_iWaveCacheIndex = 0;
         }
     }
-    else if (wfex.wBitsPerSample == 16 && wfex.nChannels == 2)
+    else if (m_dwSamplesPerSec/*wfex.nSamplesPerSec*/ == 16 && m_wChannels/*wfex.nChannels*/ == 2)
     {
         WORD * pW = (WORD *)pBuf;
         iSize /= 4;
@@ -195,43 +166,43 @@ void CAudioSynth::FillPCMAudioBuffer(const WAVEFORMATEX& wfex, BYTE pBuf[], int 
     }
 }
 
-void CAudioSynth::CalcCache(const WAVEFORMATEX& wfex)
+void AudioSynth::CalcCache(/*const WAVEFORMATEX& wfex*/)
 {
     switch (m_iWaveform)
     {
-    case WAVE_SINE:
-        CalcCacheSine(wfex);
+    case Waveforms::WAVE_SINE:
+        CalcCacheSine(/*wfex*/);
         break;
 
-    case WAVE_SQUARE:
-        CalcCacheSquare(wfex);
+    case Waveforms::WAVE_SQUARE:
+        CalcCacheSquare(/*wfex*/);
         break;
 
-    case WAVE_SAWTOOTH:
-        CalcCacheSawtooth(wfex);
+    case Waveforms::WAVE_SAWTOOTH:
+        CalcCacheSawtooth(/*wfex*/);
         break;
 
-    case WAVE_SINESWEEP:
-        CalcCacheSweep(wfex);
+    case Waveforms::WAVE_SINESWEEP:
+        CalcCacheSweep(/*wfex*/);
         break;
     }
 }
 
-void CAudioSynth::CalcCacheSine(const WAVEFORMATEX& wfex)
+void AudioSynth::CalcCacheSine(/*const WAVEFORMATEX& wfex*/)
 {
     int i;
     double d;
     double amplitude;
     double FTwoPIDivSpS;
 
-    amplitude = ((wfex.wBitsPerSample == 8) ? 127 : 32767) * m_iAmplitude / 100;
+    amplitude = ((m_wBitsPerSample/*wfex.wBitsPerSample*/ == 8) ? 127 : 32767) * m_iAmplitude / 100;
 
-    FTwoPIDivSpS = m_iFrequency * TWOPI / wfex.nSamplesPerSec;
+    FTwoPIDivSpS = m_iFrequency * TWOPI / m_dwSamplesPerSec/*wfex.nSamplesPerSec*/;
 
     m_iWaveCacheIndex = 0;
     m_iCurrentSample = 0;
 
-    if (wfex.wBitsPerSample == 8)
+    if (m_wBitsPerSample/*wfex.wBitsPerSample*/ == 8)
     {
         BYTE * pB = m_bWaveCache;
 
@@ -253,7 +224,7 @@ void CAudioSynth::CalcCacheSine(const WAVEFORMATEX& wfex)
     }
 }
 
-void CAudioSynth::CalcCacheSquare(const WAVEFORMATEX& wfex)
+void AudioSynth::CalcCacheSquare(/*const WAVEFORMATEX& wfex*/)
 {
     int i;
     double d;
@@ -266,12 +237,12 @@ void CAudioSynth::CalcCacheSquare(const WAVEFORMATEX& wfex)
     w0 = (WORD)(32767. * m_iAmplitude / 100);
     w1 = (WORD)-(32767. * m_iAmplitude / 100);
 
-    FTwoPIDivSpS = m_iFrequency * TWOPI / wfex.nSamplesPerSec;
+    FTwoPIDivSpS = m_iFrequency * TWOPI / m_dwSamplesPerSec/*wfex.nSamplesPerSec*/;
 
     m_iWaveCacheIndex = 0;
     m_iCurrentSample = 0;
 
-    if (wfex.wBitsPerSample == 8)
+    if (m_wBitsPerSample/*wfex.wBitsPerSample*/ == 8)
     {
         BYTE * pB = m_bWaveCache;
 
@@ -293,7 +264,7 @@ void CAudioSynth::CalcCacheSquare(const WAVEFORMATEX& wfex)
     }
 }
 
-void CAudioSynth::CalcCacheSawtooth(const WAVEFORMATEX& wfex)
+void AudioSynth::CalcCacheSawtooth(/*const WAVEFORMATEX& wfex*/)
 {
     int i;
     double d;
@@ -304,11 +275,11 @@ void CAudioSynth::CalcCacheSawtooth(const WAVEFORMATEX& wfex)
     BOOL fLastWasNeg = TRUE;
     BOOL fPositive;
 
-    amplitude = ((wfex.wBitsPerSample == 8) ? 255 : 65535)
+    amplitude = ((m_wBitsPerSample/*wfex.wBitsPerSample*/ == 8) ? 255 : 65535)
         * m_iAmplitude / 100;
 
-    FTwoPIDivSpS = m_iFrequency * TWOPI / wfex.nSamplesPerSec;
-    step = amplitude * m_iFrequency / wfex.nSamplesPerSec;
+    FTwoPIDivSpS = m_iFrequency * TWOPI / m_dwSamplesPerSec/*wfex.nSamplesPerSec*/;
+    step = amplitude * m_iFrequency / m_dwSamplesPerSec/*wfex.nSamplesPerSec*/;
 
     m_iWaveCacheIndex = 0;
     m_iCurrentSample = 0;
@@ -325,14 +296,14 @@ void CAudioSynth::CalcCacheSawtooth(const WAVEFORMATEX& wfex)
 
         if (fLastWasNeg && fPositive)
         {
-            if (wfex.wBitsPerSample == 8)
+            if (m_wBitsPerSample/*wfex.wBitsPerSample*/ == 8)
                 curstep = 128 - amplitude / 2;
             else
                 curstep = 32768 - amplitude / 2;
         }
         fLastWasNeg = !fPositive;
 
-        if (wfex.wBitsPerSample == 8)
+        if (m_wBitsPerSample/*wfex.wBitsPerSample*/ == 8)
             *pB++ = (BYTE)curstep;
         else
             *pW++ = (WORD)(-32767 + curstep);
@@ -341,7 +312,7 @@ void CAudioSynth::CalcCacheSawtooth(const WAVEFORMATEX& wfex)
     }
 }
 
-void CAudioSynth::CalcCacheSweep(const WAVEFORMATEX& wfex)
+void AudioSynth::CalcCacheSweep(/*const WAVEFORMATEX& wfex*/)
 {
     int i;
     double d;
@@ -350,7 +321,7 @@ void CAudioSynth::CalcCacheSweep(const WAVEFORMATEX& wfex)
     double CurrentFreq;
     double DeltaFreq;
 
-    amplitude = ((wfex.wBitsPerSample == 8) ? 127 : 32767) * m_iAmplitude / 100;
+    amplitude = ((m_wBitsPerSample/*wfex.wBitsPerSample*/ == 8) ? 127 : 32767) * m_iAmplitude / 100;
 
     DeltaFreq = ((double)m_iSweepEnd - m_iSweepStart) / m_iWaveCacheSize;
     CurrentFreq = m_iSweepStart;
@@ -358,14 +329,14 @@ void CAudioSynth::CalcCacheSweep(const WAVEFORMATEX& wfex)
     m_iWaveCacheIndex = 0;
     m_iCurrentSample = 0;
 
-    if (wfex.wBitsPerSample == 8)
+    if (m_wBitsPerSample/*wfex.wBitsPerSample*/ == 8)
     {
         BYTE * pB = m_bWaveCache;
         d = 0.0;
 
         for (i = 0; i < m_iWaveCacheSize; i++)
         {
-            FTwoPIDivSpS = (int)CurrentFreq * TWOPI / wfex.nSamplesPerSec;
+            FTwoPIDivSpS = (int)CurrentFreq * TWOPI / m_dwSamplesPerSec/*wfex.nSamplesPerSec*/;
             CurrentFreq += DeltaFreq;
             d += FTwoPIDivSpS;
             *pB++ = (BYTE)((sin(d) * amplitude) + 128);
@@ -378,7 +349,7 @@ void CAudioSynth::CalcCacheSweep(const WAVEFORMATEX& wfex)
 
         for (i = 0; i < m_iWaveCacheSize; i++)
         {
-            FTwoPIDivSpS = (int)CurrentFreq * TWOPI / wfex.nSamplesPerSec;
+            FTwoPIDivSpS = (int)CurrentFreq * TWOPI / m_dwSamplesPerSec/*wfex.nSamplesPerSec*/;
             CurrentFreq += DeltaFreq;
             d += FTwoPIDivSpS;
             *pW++ = (WORD)(sin(d) * amplitude);
@@ -386,7 +357,7 @@ void CAudioSynth::CalcCacheSweep(const WAVEFORMATEX& wfex)
     }
 }
 
-HRESULT CAudioSynth::get_Frequency(int *pFrequency)
+HRESULT AudioSynth::get_Frequency(int *pFrequency)
 {
     if (pFrequency == NULL) 
         return E_POINTER;
@@ -397,7 +368,7 @@ HRESULT CAudioSynth::get_Frequency(int *pFrequency)
     return NOERROR;
 }
 
-HRESULT CAudioSynth::put_Frequency(int Frequency)
+HRESULT AudioSynth::put_Frequency(int Frequency)
 {
     AutoLock l(m_pStateLock);
 
@@ -407,17 +378,15 @@ HRESULT CAudioSynth::put_Frequency(int Frequency)
     return NOERROR;
 }
 
-HRESULT CAudioSynth::get_Waveform(int *pWaveform)
+HRESULT AudioSynth::get_Waveform(Waveforms &waveForm) const
 {
-    if(pWaveform == NULL)
-        return E_POINTER;
-    *pWaveform = m_iWaveform;
+    waveForm = m_iWaveform;
 
-    LOG_VERBOSE( L"get_Waveform: %d" << *pWaveform );
+    LOG_VERBOSE( L"get_Waveform: %d" << *waveForm );
     return NOERROR;
 }
 
-HRESULT CAudioSynth::put_Waveform(int Waveform)
+HRESULT AudioSynth::put_Waveform(Waveforms Waveform)
 {
     AutoLock l(m_pStateLock);
 
@@ -427,7 +396,7 @@ HRESULT CAudioSynth::put_Waveform(int Waveform)
     return NOERROR;
 }
 
-HRESULT CAudioSynth::get_Channels(int *pChannels)
+HRESULT AudioSynth::get_Channels(int *pChannels)
 {
     if(pChannels == NULL)
         return E_POINTER;
@@ -438,7 +407,7 @@ HRESULT CAudioSynth::get_Channels(int *pChannels)
     return NOERROR;
 }
 
-HRESULT CAudioSynth::put_Channels(int Channels)
+HRESULT AudioSynth::put_Channels(int Channels)
 {
     AutoLock l(m_pStateLock);
 
@@ -446,7 +415,7 @@ HRESULT CAudioSynth::put_Channels(int Channels)
     return NOERROR;
 }
 
-HRESULT CAudioSynth::get_BitsPerSample(int *pBitsPerSample)
+HRESULT AudioSynth::get_BitsPerSample(int *pBitsPerSample)
 {
     if(pBitsPerSample == NULL)
         return E_POINTER;
@@ -457,7 +426,7 @@ HRESULT CAudioSynth::get_BitsPerSample(int *pBitsPerSample)
     return NOERROR;
 }
 
-HRESULT CAudioSynth::put_BitsPerSample(int BitsPerSample)
+HRESULT AudioSynth::put_BitsPerSample(int BitsPerSample)
 {
     AutoLock l(m_pStateLock);
 
@@ -465,7 +434,7 @@ HRESULT CAudioSynth::put_BitsPerSample(int BitsPerSample)
     return NOERROR;
 }
 
-HRESULT CAudioSynth::get_SamplesPerSec(int *pSamplesPerSec)
+HRESULT AudioSynth::get_SamplesPerSec(int *pSamplesPerSec)
 {
     if(pSamplesPerSec == NULL)
         return E_POINTER;
@@ -476,7 +445,7 @@ HRESULT CAudioSynth::get_SamplesPerSec(int *pSamplesPerSec)
     return NOERROR;
 }
 
-HRESULT CAudioSynth::put_SamplesPerSec(int SamplesPerSec)
+HRESULT AudioSynth::put_SamplesPerSec(int SamplesPerSec)
 {
     AutoLock l(m_pStateLock);
 
@@ -484,7 +453,7 @@ HRESULT CAudioSynth::put_SamplesPerSec(int SamplesPerSec)
     return NOERROR;
 }
 
-HRESULT CAudioSynth::put_SynthFormat(int Channels, int BitsPerSample, int SamplesPerSec)
+HRESULT AudioSynth::put_SynthFormat(int Channels, int BitsPerSample, int SamplesPerSec)
 {
     AutoLock l(m_pStateLock);
 
@@ -497,7 +466,7 @@ HRESULT CAudioSynth::put_SynthFormat(int Channels, int BitsPerSample, int Sample
     return NOERROR;
 }
 
-HRESULT CAudioSynth::get_Amplitude(int *pAmplitude)
+HRESULT AudioSynth::get_Amplitude(int *pAmplitude)
 {
     if(pAmplitude == NULL)
         return E_POINTER;
@@ -508,7 +477,7 @@ HRESULT CAudioSynth::get_Amplitude(int *pAmplitude)
     return NOERROR;
 }
 
-HRESULT CAudioSynth::put_Amplitude(int Amplitude)
+HRESULT AudioSynth::put_Amplitude(int Amplitude)
 {
     AutoLock l(m_pStateLock);
 
@@ -521,7 +490,7 @@ HRESULT CAudioSynth::put_Amplitude(int Amplitude)
     return NOERROR;
 }
 
-HRESULT CAudioSynth::get_SweepRange(int *pSweepStart, int *pSweepEnd)
+HRESULT AudioSynth::get_SweepRange(int *pSweepStart, int *pSweepEnd)
 {
     if(pSweepStart == NULL)
         return E_POINTER;
@@ -536,7 +505,7 @@ HRESULT CAudioSynth::get_SweepRange(int *pSweepStart, int *pSweepEnd)
     return NOERROR;
 }
 
-HRESULT CAudioSynth::put_SweepRange(int SweepStart, int SweepEnd)
+HRESULT AudioSynth::put_SweepRange(int SweepStart, int SweepEnd)
 {
     AutoLock l(m_pStateLock);
 
@@ -547,7 +516,7 @@ HRESULT CAudioSynth::put_SweepRange(int SweepStart, int SweepEnd)
     return NOERROR;
 }
 
-HRESULT CAudioSynth::get_OutputFormat(SYNTH_OUTPUT_FORMAT *pOutputFormat)
+HRESULT AudioSynth::get_OutputFormat(SYNTH_OUTPUT_FORMAT *pOutputFormat)
 {
     if(pOutputFormat == NULL)
         return E_POINTER;
@@ -571,7 +540,7 @@ HRESULT CAudioSynth::get_OutputFormat(SYNTH_OUTPUT_FORMAT *pOutputFormat)
     return S_OK;
 }
 
-HRESULT CAudioSynth::put_OutputFormat(SYNTH_OUTPUT_FORMAT ofOutputFormat)
+HRESULT AudioSynth::put_OutputFormat(SYNTH_OUTPUT_FORMAT ofOutputFormat)
 {
     AutoLock l(m_pStateLock);
 
