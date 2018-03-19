@@ -1519,7 +1519,7 @@ int32_t AudioDeviceWindowsCore::SetPlayoutDevice(uint16_t index)
 
     // Get the endpoint device's friendly-name
     if (_GetDeviceName(m_ptrDeviceOut, szDeviceName, bufferLen) == 0) 
-        LOG_INFO( L"friendly name: \"" << szDeviceName << L"\"");
+        LOG_INFO( L"Active device name: \"" << szDeviceName << L"\"");
 
     m_usingOutputDeviceIndex = true;
     m_outputDeviceIndex = index;
@@ -1945,9 +1945,9 @@ int32_t AudioDeviceWindowsCore::InitPlayout()
             PrintWAVEFORMTAEX(*pWfxOut, L"\t");
 
             LOG_INFO( L"\tAdditional settings:");
-            LOG_INFO( L"\t\t_playAudioFrameSize: " << m_playAudioFrameSize);
-            LOG_INFO( L"\t\t_playBlockSize     : " << m_playBlockSize);
-            LOG_INFO( L"\t\t_playChannels      : " << m_playChannels);
+            LOG_INFO( L"\t\tm_playAudioFrameSize: " << m_playAudioFrameSize);
+            LOG_INFO( L"\t\tm_playBlockSize     : " << m_playBlockSize);
+            LOG_INFO( L"\t\tm_playChannels      : " << m_playChannels);
         }
 
         // Create a rendering stream.
@@ -2721,14 +2721,14 @@ DWORD AudioDeviceWindowsCore::DoRenderThread()
         if (FAILED(err))
             throw err;
 
-        LOG_VERBOSE( L"[REND] size of buffer       : " << bufferLength );
+        LOG_INFO( L"[REND] size of buffer       : " << bufferLength );
 
         // Get maximum latency for the current stream (will not change for the
         // lifetime  of the IAudioClient object).
         //
         REFERENCE_TIME latency = 0;
         m_ptrClientOut->GetStreamLatency(&latency);
-        LOG_VERBOSE( L"[REND] max stream latency   : " << (DWORD)latency << L" (" << (double)(latency / 10000.0) << L" ms)");
+        LOG_INFO( L"[REND] max stream latency   : " << (DWORD)latency << L" (" << (double)(latency / 10000.0) << L" ms)");
 
         // Get the length of the periodic interval separating successive processing
         // passes by the audio engine on the data in the endpoint buffer.
@@ -2743,7 +2743,7 @@ DWORD AudioDeviceWindowsCore::DoRenderThread()
         REFERENCE_TIME devPeriod = 0;
         REFERENCE_TIME devPeriodMin = 0;
         m_ptrClientOut->GetDevicePeriod(&devPeriod, &devPeriodMin);
-        LOG_VERBOSE( L"[REND] device period        : " << (DWORD)devPeriod << L" (" << (double)(devPeriod / 10000.0) << L" ms)");
+        LOG_INFO( L"[REND] device period        : " << (DWORD)devPeriod << L" (" << (double)(devPeriod / 10000.0) << L" ms)");
 
         // Derive initial rendering delay.
         // Example: 10*(960/480) + 15 = 20 + 15 = 35ms
@@ -2751,10 +2751,10 @@ DWORD AudioDeviceWindowsCore::DoRenderThread()
         int playout_delay = 10 * (bufferLength / m_playBlockSize) + (int)((latency + devPeriod) / 10000);
         m_sndCardPlayDelay = playout_delay;
         m_writtenSamples = 0;
-        LOG_VERBOSE( L"[REND] initial delay        : " << playout_delay);
+        LOG_INFO( L"[REND] initial delay        : " << playout_delay);
 
         double endpointBufferSizeMS = 10.0 * ((double)bufferLength / (double)m_devicePlayBlockSize);
-        LOG_VERBOSE( L"[REND] endpointBufferSizeMS : " << endpointBufferSizeMS);
+        LOG_INFO( L"[REND] endpointBufferSizeMS : " << endpointBufferSizeMS);
 
         // Before starting the stream, fill the rendering buffer with silence.
         //
@@ -2874,14 +2874,13 @@ DWORD AudioDeviceWindowsCore::DoRenderThread()
                             LOG_WARNING( L"nSamples(" << nSamples << L") != _playBlockSize" << m_playBlockSize << L")");
 
                         // Get the actual (stored) data
-                        nSamples = m_ptrPlayoutAudioBuffer->GetPlayoutData((int8_t*)pData);
+                        nSamples = m_ptrPlayoutAudioBuffer->GetPlayoutData((int8_t*)pData, m_playBlockSize);
                     }
 
-                    DWORD dwFlags(0);
-                    err = m_ptrRenderClient->ReleaseBuffer(m_playBlockSize, dwFlags);
+                    DWORD dwFlags = 0;
                     // See http://msdn.microsoft.com/en-us/library/dd316605(VS.85).aspx
                     // for more details regarding AUDCLNT_E_DEVICE_INVALIDATED.
-                    if (FAILED(err))
+                    if (FAILED(err = m_ptrRenderClient->ReleaseBuffer(m_playBlockSize, dwFlags)))
                         throw err;
 
                     m_writtenSamples += m_playBlockSize;

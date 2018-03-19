@@ -63,19 +63,27 @@ public:
 
     HRESULT get_Frequency(int *Frequency);
     HRESULT put_Frequency(int  Frequency);
+
     HRESULT get_Waveform(Waveforms &waveForm) const;
     HRESULT put_Waveform(Waveforms waveform);
+
     HRESULT get_Channels(int *Channels);
     HRESULT put_Channels(int Channels);
+
     HRESULT get_BitsPerSample(int *BitsPerSample);
     HRESULT put_BitsPerSample(int BitsPerSample);
+
     HRESULT get_SamplesPerSec(int *SamplesPerSec);
     HRESULT put_SamplesPerSec(int SamplesPerSec);
+
     HRESULT put_SynthFormat(int Channels, int BitsPerSample, int SamplesPerSec);
+
     HRESULT get_Amplitude(int *Amplitude);
     HRESULT put_Amplitude(int  Amplitude);
+
     HRESULT get_SweepRange(int *SweepStart, int *SweepEnd);
     HRESULT put_SweepRange(int  SweepStart, int  SweepEnd);
+
     HRESULT get_OutputFormat(SYNTH_OUTPUT_FORMAT *pOutputFormat);
     HRESULT put_OutputFormat(SYNTH_OUTPUT_FORMAT ofOutputFormat);
 

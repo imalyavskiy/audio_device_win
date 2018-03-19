@@ -7,17 +7,16 @@ const DWORD BITS_PER_BYTE = 8;
 #error
 #endif
 
-BOOL WINAPI CritCheckIn(CriticalSection * pcCrit)
+inline bool CritCheckIn(CriticalSection * pcCrit)
 {   
-    DWORD owner = pcCrit->CurrentOwnerId();
-    DWORD current = GetCurrentThreadId();
-    return (current == owner);
+    return (GetCurrentThreadId() == pcCrit->CurrentOwnerId());
 }
 
 AudioSynth::AudioSynth(CriticalSection* pStateLock, int Frequency, Waveforms Waveform, int iBitsPerSample, int iChannels, int iSamplesPerSec, int iAmplitude )
     : m_bWaveCache(NULL)
     , m_wWaveCache(NULL)
     , m_pStateLock(pStateLock)
+   
     , m_iFrequency(Frequency)
     , m_iWaveform(Waveform)
     , m_iAmplitude(iAmplitude)
@@ -118,7 +117,7 @@ void AudioSynth::FillPCMAudioBuffer(/*const WAVEFORMATEX& wfex, */BYTE pBuf[], i
     }
 
     // Copy cache to output buffers
-    if (m_dwSamplesPerSec/*wfex.nSamplesPerSec*/ == 8 && m_wChannels/*wfex.nChannels*/ == 1)
+    if (m_wBitsPerSample/*wfex.wBitsPerSample*/ == 8 && m_wChannels/*wfex.nChannels*/ == 1)
     {
         while (iSize--)
         {
@@ -127,7 +126,7 @@ void AudioSynth::FillPCMAudioBuffer(/*const WAVEFORMATEX& wfex, */BYTE pBuf[], i
                 m_iWaveCacheIndex = 0;
         }
     }
-    else if (m_dwSamplesPerSec/*wfex.nSamplesPerSec*/ == 8 && m_wChannels/*wfex.nChannels*/ == 2)
+    else if (m_wBitsPerSample/*wfex.wBitsPerSample*/ == 8 && m_wChannels/*wfex.nChannels*/ == 2)
     {
         iSize /= 2;
 
@@ -139,7 +138,7 @@ void AudioSynth::FillPCMAudioBuffer(/*const WAVEFORMATEX& wfex, */BYTE pBuf[], i
                 m_iWaveCacheIndex = 0;
         }
     }
-    else if (m_dwSamplesPerSec/*wfex.nSamplesPerSec*/ == 16 && m_wChannels/*wfex.nChannels*/ == 1)
+    else if (m_wBitsPerSample/*wfex.wBitsPerSample*/ == 16 && m_wChannels/*wfex.nChannels*/ == 1)
     {
         WORD * pW = (WORD *)pBuf;
         iSize /= 2;
@@ -151,7 +150,7 @@ void AudioSynth::FillPCMAudioBuffer(/*const WAVEFORMATEX& wfex, */BYTE pBuf[], i
                 m_iWaveCacheIndex = 0;
         }
     }
-    else if (m_dwSamplesPerSec/*wfex.nSamplesPerSec*/ == 16 && m_wChannels/*wfex.nChannels*/ == 2)
+    else if (m_wBitsPerSample/*wfex.wBitsPerSample*/ == 16 && m_wChannels/*wfex.nChannels*/ == 2)
     {
         WORD * pW = (WORD *)pBuf;
         iSize /= 4;
@@ -186,6 +185,10 @@ void AudioSynth::CalcCache(/*const WAVEFORMATEX& wfex*/)
         CalcCacheSweep(/*wfex*/);
         break;
     }
+
+    m_iWaveformLast = m_iWaveform;
+    m_iFrequencyLast = m_iFrequency;
+    m_iAmplitudeLast = m_iAmplitude;
 }
 
 void AudioSynth::CalcCacheSine(/*const WAVEFORMATEX& wfex*/)

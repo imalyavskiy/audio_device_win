@@ -33,7 +33,7 @@ struct AudioDevicePlayoutBufferInterface : AudioDeviceBufferInterface
     virtual size_t   PlayoutFameSize() const = 0;
 
     virtual int32_t  RequestPlayoutData(const size_t samples_per_channel) = 0;
-    virtual int32_t  GetPlayoutData(void* audio_buffer) = 0;
+    virtual int32_t  GetPlayoutData(void* audio_buffer, uint32_t playBlockSize) = 0;
 };
 
 struct AudioDeviceRecordingBufferInterface : AudioDeviceBufferInterface

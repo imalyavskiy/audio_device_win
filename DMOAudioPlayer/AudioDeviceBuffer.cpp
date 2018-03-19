@@ -122,14 +122,17 @@ AudioDeviceBuffer::PlayoutFameSize() const
 int32_t
 AudioDeviceBuffer::RequestPlayoutData(const size_t samples_per_channel)
 {
-    const size_t total_samples = (*m_playoutChannels) * samples_per_channel;
-    throw std::logic_error("not implemented");
+//    const size_t total_samples = (*m_playoutChannels) * samples_per_channel;
+    return (int32_t)samples_per_channel;
 }
 
 int32_t
-AudioDeviceBuffer::GetPlayoutData(void* audio_buffer)
+AudioDeviceBuffer::GetPlayoutData(void* audio_buffer, uint32_t playBlockSize)
 {
-    throw std::logic_error("not implemented");
+    AutoLock l(m_critical_section);
+    m_synth->FillPCMAudioBuffer(static_cast<BYTE*>(audio_buffer), (*m_playoutFrameSizeBytes) * playBlockSize);
+
+    return ((*m_playoutSampleRateHz) / 100);
 }
 
 int32_t

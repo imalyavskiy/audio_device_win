@@ -30,7 +30,7 @@ public:
     int32_t  RequestPlayoutData(const size_t samples_per_channel) override; // A question of how many samples per sample are ready
                                                                             //  must returns actual number or -1 in case of error
 
-    int32_t  GetPlayoutData(void* audio_buffer) override;
+    int32_t  GetPlayoutData(void* audio_buffer, uint32_t playBlockSize) override;
 
     // AudioDeviceRecordingBufferInterface
     int32_t  SetRecordingSampleRate(uint32_t fsHz) override;
