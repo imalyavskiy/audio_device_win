@@ -12,11 +12,75 @@ inline bool CritCheckIn(CriticalSection * pcCrit)
     return (GetCurrentThreadId() == pcCrit->CurrentOwnerId());
 }
 
+//////////////////////////////////////////////////////////////////////////
+
+RawAudioSource::RawAudioSource( CriticalSection* pStateLock, int Frequency, Waveforms Waveform, int iBitsPerSample, int iChannels, int iSamplesPerSec, int iAmplitude )
+    : m_BitsPerSample(iBitsPerSample)
+    , m_SamplesPerSecond(iSamplesPerSec)
+    , m_Channels(iChannels)
+{
+    std::streampos begin;
+    std::streampos end;
+
+    if (m_SamplesPerSecond == 48000 && m_BitsPerSample == 16 && m_Channels == 2)
+    {
+        m_source_data.open("C:\\Users\\developer\\etc\\DMOAudioPlayer\\48000_16bit_2ch_LittleEndian.raw", std::ios_base::in | std::ios_base::binary);
+        assert(m_source_data.is_open());
+
+        begin = m_source_data.tellg();
+
+        m_source_data.seekg(0, std::ios_base::end);
+
+        end = m_source_data.tellg();
+
+        m_source_data.seekg(0, std::ios_base::beg);
+
+        m_file_size = end - begin;
+
+        assert(0 == m_file_size % ((m_BitsPerSample * m_Channels) / 8));
+    }
+}
+
+RawAudioSource::~RawAudioSource()
+{
+    m_source_data.close();
+}
+
+// Load the buffer with the current waveform
+HRESULT 
+RawAudioSource::FillPCMAudioBuffer(/*const WAVEFORMATEX& wfex, */BYTE pBuf[], int iBytes)
+{
+    std::streampos file_bytes_rest = m_file_size - m_source_data.tellg();
+    std::streampos curr_pos;
+    if (iBytes < file_bytes_rest)
+    {
+        m_source_data.read(reinterpret_cast<char*>(pBuf), std::streamsize(iBytes));
+
+        if (std::ios_base::failbit & m_source_data.rdstate())
+            return E_FAIL;
+
+        curr_pos = m_source_data.tellg();
+
+        return S_OK;
+    }
+
+    return E_FAIL;
+}
+
+// Set the "current" format and allocate temporary memory
+HRESULT 
+RawAudioSource::AllocWaveCache(/*const WAVEFORMATEX& wfex*/)
+{
+    return S_OK; // here this function does nothing but must exist
+}
+
+
+//////////////////////////////////////////////////////////////////////////
+
 AudioSynth::AudioSynth(CriticalSection* pStateLock, int Frequency, Waveforms Waveform, int iBitsPerSample, int iChannels, int iSamplesPerSec, int iAmplitude )
     : m_bWaveCache(NULL)
     , m_wWaveCache(NULL)
     , m_pStateLock(pStateLock)
-   
     , m_iFrequency(Frequency)
     , m_iWaveform(Waveform)
     , m_iAmplitude(iAmplitude)
@@ -40,7 +104,8 @@ AudioSynth::~AudioSynth()
         delete[] m_wWaveCache;
 }
 
-HRESULT AudioSynth::AllocWaveCache(/*const WAVEFORMATEX& wfex*/)
+HRESULT 
+AudioSynth::AllocWaveCache(/*const WAVEFORMATEX& wfex*/)
 {
     // The caller should hold the state lock because this
     // function uses m_iWaveCacheCycles, m_iWaveCacheSize
@@ -83,7 +148,8 @@ HRESULT AudioSynth::AllocWaveCache(/*const WAVEFORMATEX& wfex*/)
     return S_OK;
 }
 
-void AudioSynth::FillPCMAudioBuffer(/*const WAVEFORMATEX& wfex, */BYTE pBuf[], int iSize)
+HRESULT
+AudioSynth::FillPCMAudioBuffer(/*const WAVEFORMATEX& wfex, */BYTE pBuf[], int iBytes)
 {
     BOOL fCalcCache = FALSE;
 
@@ -119,7 +185,7 @@ void AudioSynth::FillPCMAudioBuffer(/*const WAVEFORMATEX& wfex, */BYTE pBuf[], i
     // Copy cache to output buffers
     if (m_wBitsPerSample/*wfex.wBitsPerSample*/ == 8 && m_wChannels/*wfex.nChannels*/ == 1)
     {
-        while (iSize--)
+        while (iBytes--)
         {
             *pBuf++ = m_bWaveCache[m_iWaveCacheIndex++];
             if (m_iWaveCacheIndex >= m_iWaveCacheSize)
@@ -128,9 +194,9 @@ void AudioSynth::FillPCMAudioBuffer(/*const WAVEFORMATEX& wfex, */BYTE pBuf[], i
     }
     else if (m_wBitsPerSample/*wfex.wBitsPerSample*/ == 8 && m_wChannels/*wfex.nChannels*/ == 2)
     {
-        iSize /= 2;
+        iBytes /= 2;
 
-        while (iSize--)
+        while (iBytes--)
         {
             *pBuf++ = m_bWaveCache[m_iWaveCacheIndex];
             *pBuf++ = m_bWaveCache[m_iWaveCacheIndex++];
@@ -141,9 +207,9 @@ void AudioSynth::FillPCMAudioBuffer(/*const WAVEFORMATEX& wfex, */BYTE pBuf[], i
     else if (m_wBitsPerSample/*wfex.wBitsPerSample*/ == 16 && m_wChannels/*wfex.nChannels*/ == 1)
     {
         WORD * pW = (WORD *)pBuf;
-        iSize /= 2;
+        iBytes /= 2;
 
-        while (iSize--)
+        while (iBytes--)
         {
             *pW++ = m_wWaveCache[m_iWaveCacheIndex++];
             if (m_iWaveCacheIndex >= m_iWaveCacheSize)
@@ -153,9 +219,9 @@ void AudioSynth::FillPCMAudioBuffer(/*const WAVEFORMATEX& wfex, */BYTE pBuf[], i
     else if (m_wBitsPerSample/*wfex.wBitsPerSample*/ == 16 && m_wChannels/*wfex.nChannels*/ == 2)
     {
         WORD * pW = (WORD *)pBuf;
-        iSize /= 4;
+        iBytes /= 4;
 
-        while (iSize--)
+        while (iBytes--)
         {
             *pW++ = m_wWaveCache[m_iWaveCacheIndex];
             *pW++ = m_wWaveCache[m_iWaveCacheIndex++];
@@ -163,6 +229,8 @@ void AudioSynth::FillPCMAudioBuffer(/*const WAVEFORMATEX& wfex, */BYTE pBuf[], i
                 m_iWaveCacheIndex = 0;
         }
     }
+
+    return S_OK;
 }
 
 void AudioSynth::CalcCache(/*const WAVEFORMATEX& wfex*/)

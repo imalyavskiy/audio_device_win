@@ -53,7 +53,7 @@ protected:
     std::unique_ptr<size_t>   m_playoutChannels;
     std::unique_ptr<size_t>   m_playoutFrameSizeBytes; // frameSize / playoutChannels * 8 == bits per sample
     
-    std::shared_ptr<AudioSynth> m_synth;
+    std::shared_ptr<DataSourceInterface> m_synth;
 
     CriticalSection m_critical_section;
 

@@ -51,7 +51,7 @@ AudioDeviceBuffer::SetPlayoutPCMFormat(uint32_t samplesPerSecHz, size_t channels
     m_playoutFrameSizeBytes = std::make_unique<size_t>(channels * bitsPerSample / 8);
     LOG_INFO(L"Playout frame size == " << *m_playoutFrameSizeBytes << L" bytes");
 
-    m_synth.reset(new AudioSynth(&m_critical_section
+    m_synth.reset(new RawAudioSource/*AudioSynth*/(&m_critical_section
         , 440
         , Waveforms::WAVE_SINE
         , (int)(8 * (*m_playoutFrameSizeBytes) / (*m_playoutChannels))
@@ -130,9 +130,11 @@ int32_t
 AudioDeviceBuffer::GetPlayoutData(void* audio_buffer, uint32_t playBlockSize)
 {
     AutoLock l(m_critical_section);
-    m_synth->FillPCMAudioBuffer(static_cast<BYTE*>(audio_buffer), (*m_playoutFrameSizeBytes) * playBlockSize);
+    
+    if(SUCCEEDED(m_synth->FillPCMAudioBuffer(static_cast<BYTE*>(audio_buffer), (*m_playoutFrameSizeBytes) * playBlockSize)))
+        return ((*m_playoutSampleRateHz) / 100);
 
-    return ((*m_playoutSampleRateHz) / 100);
+    return 0;
 }
 
 int32_t

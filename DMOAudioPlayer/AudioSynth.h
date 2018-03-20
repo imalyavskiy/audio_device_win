@@ -39,8 +39,53 @@ const int MinAmplitude = 0;
 const int DefaultSweepStart = DefaultFrequency;
 const int DefaultSweepEnd = 5000;
 
+// Class that just reads the raw audio file
+
+struct DataSourceInterface
+{
+    virtual ~DataSourceInterface() {};
+
+    // Load the buffer with the current waveform
+    virtual HRESULT FillPCMAudioBuffer(/*const WAVEFORMATEX& wfex, */BYTE pBuf[], int iBytes) = 0;
+
+    // Set the "current" format and allocate temporary memory
+    virtual HRESULT AllocWaveCache(/*const WAVEFORMATEX& wfex*/) = 0;
+};
+
+class RawAudioSource
+    : public DataSourceInterface
+{
+protected:
+    const uint32_t m_SamplesPerSecond;
+    const uint32_t m_BitsPerSample;
+    const uint32_t m_Channels;
+
+    std::ifstream  m_source_data;
+    std::streamoff m_file_size;
+public:
+    RawAudioSource(
+        CriticalSection* pStateLock,
+        int Frequency = DefaultFrequency,
+        Waveforms Waveform = Waveforms::WAVE_SINE,
+        int iBitsPerSample = 8,
+        int iChannels = 1,
+        int iSamplesPerSec = 11025,
+        int iAmplitude = 100
+    );
+
+    ~RawAudioSource();
+
+    // Load the buffer with the current waveform
+    virtual HRESULT FillPCMAudioBuffer(/*const WAVEFORMATEX& wfex, */BYTE pBuf[], int iBytes) override;
+
+    // Set the "current" format and allocate temporary memory
+    virtual HRESULT AllocWaveCache(/*const WAVEFORMATEX& wfex*/) override;
+};
+
 // Class that synthesizes waveforms
-class AudioSynth {
+class AudioSynth 
+    : public DataSourceInterface
+{
 public:
 
     AudioSynth(
@@ -56,10 +101,10 @@ public:
     ~AudioSynth();
 
     // Load the buffer with the current waveform
-    void FillPCMAudioBuffer(/*const WAVEFORMATEX& wfex, */BYTE pBuf[], int iSize);
+    virtual HRESULT FillPCMAudioBuffer(/*const WAVEFORMATEX& wfex, */BYTE pBuf[], int iBytes) override;
 
     // Set the "current" format and allocate temporary memory
-    HRESULT AllocWaveCache(/*const WAVEFORMATEX& wfex*/);
+    virtual HRESULT AllocWaveCache(/*const WAVEFORMATEX& wfex*/) override;
 
     HRESULT get_Frequency(int *Frequency);
     HRESULT put_Frequency(int  Frequency);

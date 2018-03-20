@@ -48,6 +48,9 @@
     <ClInclude Include="AudioDeviceBufferInterface.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="RenderStream.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -72,6 +75,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="AudioDeviceBuffer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="RenderStream.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
