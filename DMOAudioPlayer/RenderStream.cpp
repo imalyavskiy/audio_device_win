@@ -182,6 +182,7 @@ MyAudioSourceImpl::MyAudioSourceImpl()
 
 bool MyAudioSourceImpl::Init(const std::string& file)
 {
+	// http://www-mmsp.ece.mcgill.ca/Documents/AudioFormats/WAVE/WAVE.html
     m_source_data.open(file, std::ios_base::in | std::ios_base::binary);
     assert(m_source_data.is_open());
 
@@ -241,13 +242,13 @@ bool MyAudioSourceImpl::Init(const std::string& file)
 
             if (chkSize == 18) break;
 
-            WORD    wValidBitsPerSample = 0;
+            WORD    wValidBitsPerSample = 0; // 2(20)
             m_source_data.read(reinterpret_cast<char*>(&cbSize), sizeof(WORD));
 
-            DWORD   dwChannelMask = 0;
+            DWORD   dwChannelMask = 0;	// 4(24)
             m_source_data.read(reinterpret_cast<char*>(&dwChannelMask), sizeof(DWORD));
 
-            GUID    SubFormat{ 0 };
+            GUID    SubFormat{ 0 };	// 16(40)
             m_source_data.read(reinterpret_cast<char*>(&SubFormat), sizeof(GUID));
 
             assert(chkSize == 40);
