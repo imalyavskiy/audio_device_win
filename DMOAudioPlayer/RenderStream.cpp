@@ -1,6 +1,5 @@
 
 #include "stdafx.h"
-#include "RenderStream.h"
 
 #include <wmcodecdsp.h>      // CLSID_CWMAudioAEC
 // (must be before audioclient.h)
@@ -10,6 +9,8 @@
 #include <avrt.h>            // Avrt
 #include <endpointvolume.h>
 #include <mediaobj.h>        // IMediaObject
+
+#include "RenderStream.h"
 
 //-----------------------------------------------------------
 // Play an audio stream on the default audio rendering
@@ -47,22 +48,25 @@ const uint32_t wave_4cc = MAKEFOURCC('W', 'A', 'V', 'E');
 const uint32_t fmt_4cc  = MAKEFOURCC('f', 'm', 't', ' ');
 const uint32_t data_4cc = MAKEFOURCC('d', 'a', 't', 'a');
 
+https://msdn.microsoft.com/en-us/library/windows/desktop/dd370802(v=vs.85).aspx
+
 HRESULT PlayAudioStream(MyAudioSource *pMySource)
 {
-    HRESULT hr;
-    REFERENCE_TIME hnsRequestedDuration = REFTIMES_PER_SEC;
-    REFERENCE_TIME hnsActualDuration;
-    IMMDeviceEnumerator *pEnumerator = NULL;
-    IMMDevice *pDevice = NULL;
-    IAudioClient *pAudioClient = NULL;
-    IAudioRenderClient *pRenderClient = NULL;
-    WAVEFORMATEX *pwfx = NULL;
-    WAVEFORMATEXTENSIBLE* pwfext = NULL;
-    UINT32 bufferFrameCount;
-    UINT32 numFramesAvailable;
-    UINT32 numFramesPadding;
-    BYTE *pData;
-    DWORD flags = 0;
+    HRESULT                 hr                      = S_OK;
+    REFERENCE_TIME          hnsRequestedDuration    = REFTIMES_PER_SEC;
+    REFERENCE_TIME          hnsActualDuration       = 0;
+    IMMDeviceEnumerator*    pEnumerator             = NULL;
+    IMMDevice*              pDevice                 = NULL;
+    IAudioClient*           pAudioClient            = NULL;
+    IAudioRenderClient*     pRenderClient           = NULL;
+    WAVEFORMATEX*           pwfx                    = NULL;
+    WAVEFORMATEXTENSIBLE*   pwfext                  = NULL;
+    UINT32                  bufferFrameCount        = 0;
+    UINT32                  numFramesAvailable      = 0;
+    UINT32                  numFramesPadding        = 0;
+    BYTE*                   pData                   = NULL;
+    DWORD                   flags                   = 0;
+    WAVEFORMATEX*           closest_wfx             = NULL;
 
     hr = CoCreateInstance(CLSID_MMDeviceEnumerator, NULL, CLSCTX_ALL, IID_IMMDeviceEnumerator, (void**)&pEnumerator);
     EXIT_ON_ERROR(hr)
@@ -77,33 +81,16 @@ HRESULT PlayAudioStream(MyAudioSource *pMySource)
     EXIT_ON_ERROR(hr)
 
     {
-        WAVEFORMATEX desired_wfx;
-        ZeroMemory(&desired_wfx, sizeof(WAVEFORMATEX));
+        std::unique_ptr<WAVEFORMATEXTENSIBLE> desired_wfx;
+        hr = pMySource->GetFormat(desired_wfx);
 
-        desired_wfx.wFormatTag = WAVE_FORMAT_PCM;           // WORD        wFormatTag;         /* format type */
-        desired_wfx.nChannels = 2;                          // WORD        nChannels;          /* number of channels (i.e. mono; stereo...) */
-        desired_wfx.nSamplesPerSec = 48000;                 // DWORD       nSamplesPerSec;     /* sample rate */
-        desired_wfx.nAvgBytesPerSec = 192000/*384000*/;     // DWORD       nAvgBytesPerSec;    /* for buffer estimation */
-        desired_wfx.nBlockAlign = 4/*8*/;                   // WORD        nBlockAlign;        /* block size of data */
-        desired_wfx.wBitsPerSample = 16/*32*/;              // WORD        wBitsPerSample;     /* number of bits per sample of mono data */
-        desired_wfx.cbSize = 0;                             // WORD        cbSize;             /* the count in bytes of the size of */
-                                                            //                                 /* extra information (after cbSize) */
-        WAVEFORMATEX* closest_wfx;
-        closest_wfx = NULL;
-
-        hr = pAudioClient->IsFormatSupported(AUDCLNT_SHAREMODE_SHARED, &desired_wfx, &closest_wfx);
+        hr = pAudioClient->IsFormatSupported(AUDCLNT_SHAREMODE_SHARED, reinterpret_cast<WAVEFORMATEX*>(desired_wfx.get()), &closest_wfx);
         if (hr == S_FALSE)
-            hr = E_FAIL;
-        EXIT_ON_ERROR(hr)
+            EXIT_ON_ERROR(E_FAIL)
 
-        hr = pAudioClient->Initialize(AUDCLNT_SHAREMODE_SHARED, 0, hnsRequestedDuration, 0, &desired_wfx, NULL);
-        EXIT_ON_ERROR(hr)
-
-        // Tell the audio source which format to use.
-//        hr = pMySource->SetFormat(&desired_wfx);
+        hr = pAudioClient->Initialize(AUDCLNT_SHAREMODE_SHARED, 0, hnsRequestedDuration, 0, reinterpret_cast<WAVEFORMATEX*>(desired_wfx.get()), NULL);
         EXIT_ON_ERROR(hr)
     }
-
 
     // Get the actual size of the allocated buffer.
     hr = pAudioClient->GetBufferSize(&bufferFrameCount);
@@ -117,7 +104,7 @@ HRESULT PlayAudioStream(MyAudioSource *pMySource)
     EXIT_ON_ERROR(hr)
 
         // Load the initial data into the shared buffer.
-    hr = pMySource->LoadData(bufferFrameCount, pData, &flags);
+    hr = pMySource->ReadData(bufferFrameCount, pData, &flags);
     EXIT_ON_ERROR(hr)
 
     hr = pRenderClient->ReleaseBuffer(bufferFrameCount, flags);
@@ -146,7 +133,7 @@ HRESULT PlayAudioStream(MyAudioSource *pMySource)
         EXIT_ON_ERROR(hr)
 
         // Get next 1/2-second of data from the audio source.
-        hr = pMySource->LoadData(numFramesAvailable, pData, &flags);
+        hr = pMySource->ReadData(numFramesAvailable, pData, &flags);
         EXIT_ON_ERROR(hr)
 
         hr = pRenderClient->ReleaseBuffer(numFramesAvailable, flags);
@@ -231,6 +218,9 @@ bool MyAudioSourceImpl::Init(const std::string& file)
         }
     }
 
+    m_source_data.clear();
+    m_source_data.seekg(0, std::ios_base::beg);
+
     return (bool)m_wave_riff;
 }
 
@@ -263,13 +253,13 @@ MyAudioSourceImpl::ReadWafeRiff(const std::streampos& begin, const std::streampo
 
         if (chunk_descriptor.fourcc == fmt_4cc)
         {
-            hr = ReadFMTChunk(m_source_data.tellg(), chunk_descriptor, riff->format);
+            hr = ReadFMTChunk(m_source_data.tellg(), chunk_descriptor, riff->format_chunk);
             if (FAILED(hr))
                 return hr;
         }
         else if (chunk_descriptor.fourcc == data_4cc)
         {
-            hr = ReadDataChunk(m_source_data.tellg(), chunk_descriptor, riff->data);
+            hr = ReadDataChunk(m_source_data.tellg(), chunk_descriptor, riff->data_chunk);
             if (FAILED(hr))
                 return hr;
         }
@@ -316,10 +306,11 @@ MyAudioSourceImpl::ReadDataChunk(const std::streampos& begin, const ChunkDescrip
 {
     data_chunk.reset();
     std::unique_ptr<DataChunk> chunk(new DataChunk);
-    chunk->chunk_begin = begin;
-    chunk->chunk_end = begin + std::streampos(chunk_descr.size);
+    
+    chunk->pos_begin = begin;
+    chunk->pos_end   = begin + std::streampos(chunk_descr.size);
 
-    m_source_data.seekg(chunk->chunk_end);
+    m_source_data.seekg(chunk->pos_end);
 
     chunk.swap(data_chunk);
 
@@ -328,45 +319,59 @@ MyAudioSourceImpl::ReadDataChunk(const std::streampos& begin, const ChunkDescrip
 
 MyAudioSourceImpl::~MyAudioSourceImpl()
 {
-//     char* p = reinterpret_cast<char*>(m_pwfx);
-//     delete[] p;
-//     m_pwfx = NULL;
+    ;
 }
 
 HRESULT 
-MyAudioSourceImpl::GetFormat(std::unique_ptr<WAVEFORMATEX>& pwfx)
+MyAudioSourceImpl::GetFormat(std::unique_ptr<WAVEFORMATEXTENSIBLE>& pwfx)
 {
-    if (!pwfx)
-        return E_INVALIDARG;
+    pwfx.reset();
+
+    if (!m_wave_riff->format_chunk || !m_wave_riff->data_chunk)
+        return E_FAIL;
 
     pwfx.release();
-    pwfx = std::unique_ptr<WAVEFORMATEX>(new WAVEFORMATEX);
+    pwfx = std::unique_ptr<WAVEFORMATEXTENSIBLE>(new WAVEFORMATEXTENSIBLE);
+    ZeroMemory(pwfx.get(), sizeof(WAVEFORMATEXTENSIBLE));
 
-//    assert(0 == m_file_size % ((m_pwfx->wBitsPerSample * m_pwfx->nChannels) / 8));
+    pwfx->Format.wFormatTag        = 0xfffe;
+    pwfx->Format.nChannels         = m_wave_riff->format_chunk->nChannels;
+    pwfx->Format.nSamplesPerSec    = m_wave_riff->format_chunk->nSamplesPerSecond;
+    pwfx->Format.nAvgBytesPerSec   = m_wave_riff->format_chunk->nAvgBytesPerSecond;
+    pwfx->Format.nBlockAlign       = m_wave_riff->format_chunk->nBlockAlign;
+    pwfx->Format.wBitsPerSample    = m_wave_riff->format_chunk->wBitsPerSample;
+    pwfx->Format.cbSize            = 22;
+    pwfx->Samples.wValidBitsPerSample = pwfx->Format.wBitsPerSample;
+    pwfx->dwChannelMask            = 0x3;
+    pwfx->SubFormat                = KSDATAFORMAT_SUBTYPE_PCM;
 
     return S_OK;
 }
 
 HRESULT 
-MyAudioSourceImpl::LoadData(UINT32 bufferFrameCount, BYTE* pData, DWORD* pFlags)
+MyAudioSourceImpl::ReadData(UINT32 bufferFrameCount, BYTE* pData, DWORD* pFlags)
 {
-//     std::streampos file_bytes_rest = m_file_size - m_source_data.tellg();
-//     std::streampos curr_pos;
-//     
-//     const uint32_t size = bufferFrameCount * ((m_pwfx->nChannels * m_pwfx->wBitsPerSample) / 8);
-// 
-//     if (size < file_bytes_rest)
-//     {
-//         m_source_data.read(reinterpret_cast<char*>(pData), std::streamsize(size));
-// 
-//         if (std::ios_base::failbit & m_source_data.rdstate())
-//             return E_FAIL;
-// 
-//         curr_pos = m_source_data.tellg();
-// 
-//         return S_OK;
-//     }
+    assert(m_source_data.is_open());
+    std::ios_base::iostate rdstate = std::ios_base::goodbit;
+    
+    std::streampos file_bytes_rest = m_wave_riff->data_chunk->pos_end - m_wave_riff->data_chunk->pos_begin;
+    
+    const uint32_t bufferBytesSize = bufferFrameCount * ((m_wave_riff->format_chunk->nChannels * m_wave_riff->format_chunk->wBitsPerSample) / 8);
 
-    return E_FAIL;
+    std::streampos curr_pos = m_source_data.tellg();
+    if ((curr_pos < m_wave_riff->data_chunk->pos_begin)||(m_wave_riff->data_chunk->pos_end < curr_pos))
+        m_source_data.seekg(m_wave_riff->data_chunk->pos_begin, std::ios_base::beg);
 
+    if (bufferBytesSize < file_bytes_rest)
+    {
+        m_source_data.read(reinterpret_cast<char*>(pData), std::streamsize(bufferBytesSize));
+
+        rdstate = m_source_data.rdstate();
+        if (std::ios_base::failbit & rdstate)
+            return E_FAIL;
+
+        return S_OK;
+    }
+
+    return S_FALSE;
 }

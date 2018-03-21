@@ -25,13 +25,13 @@ struct FmtChunk16
     uint32_t nSamplesPerSecond;
     uint32_t nAvgBytesPerSecond;
     uint16_t nBlockAlign;
-    uint16_t wBitsPerSecond;
+    uint16_t wBitsPerSample;
 };
 
 struct DataChunk
 {
-    std::streampos                          chunk_begin = 0;
-    std::streampos                          chunk_end = 0;
+    std::streampos                          pos_begin = 0;
+    std::streampos                          pos_end = 0;
 };
 
 struct FmtChunk18
@@ -66,8 +66,8 @@ struct AssocDataListChunk
 
 struct WaveRiff
 {
-    std::unique_ptr<FmtChunk>               format;
-    std::unique_ptr<DataChunk>              data;
+    std::unique_ptr<FmtChunk>               format_chunk;
+    std::unique_ptr<DataChunk>              data_chunk;
 };
 
 
@@ -75,8 +75,8 @@ struct MyAudioSource
 {
     virtual ~MyAudioSource() {};
 
-    virtual HRESULT GetFormat(std::unique_ptr<WAVEFORMATEX>& pwfx) = 0;
-    virtual HRESULT LoadData(UINT32 bufferFrameCount, BYTE* pData, DWORD* pFlags) = 0;
+    virtual HRESULT GetFormat(std::unique_ptr<WAVEFORMATEXTENSIBLE>& pwfx) = 0;
+    virtual HRESULT ReadData(UINT32 bufferFrameCount, BYTE* pData, DWORD* pFlags) = 0;
 
 };
 
@@ -93,8 +93,8 @@ protected:
     
     bool Init(const std::string& file);
 
-    virtual HRESULT GetFormat(std::unique_ptr<WAVEFORMATEX>& pwfx) override;
-    virtual HRESULT LoadData(UINT32 bufferFrameCount, BYTE* pData, DWORD* pFlags) override;
+    virtual HRESULT GetFormat(std::unique_ptr<WAVEFORMATEXTENSIBLE>& pwfx) override;
+    virtual HRESULT ReadData(UINT32 bufferFrameCount, BYTE* pData, DWORD* pFlags) override;
 
     HRESULT ReadWafeRiff(const std::streampos& begin, const std::streampos& end, std::unique_ptr<WaveRiff>& wave_riff);
     HRESULT ReadFMTChunk(const std::streampos& begin, const ChunkDescriptor& chunk_descr, std::unique_ptr<FmtChunk>& fmt_chunk);
@@ -105,9 +105,6 @@ protected:
     std::streamoff m_file_size;
 
     std::unique_ptr<WaveRiff> m_wave_riff;
-
-    WAVEFORMATEX  m_wfx{ WAVE_FORMAT_PCM, 2, 48000, 192000, 4, 16, 0 };
-//    WAVEFORMATEX  m_wfx{ WAVE_FORMAT_PCM, 2, 48000, 384000, 8, 32, 0 };
 };
 
 HRESULT PlayAudioStream(MyAudioSource *pMySource);

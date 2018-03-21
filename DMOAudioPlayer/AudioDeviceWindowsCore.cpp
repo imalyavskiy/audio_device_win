@@ -332,12 +332,7 @@ AudioDeviceWindowsCore::CoreAudioIsSupported()
     const CLSID CLSID_MMDeviceEnumerator = __uuidof(MMDeviceEnumerator);
     const IID IID_IMMDeviceEnumerator = __uuidof(IMMDeviceEnumerator);
 
-    hr = CoCreateInstance(
-        CLSID_MMDeviceEnumerator,  // GUID value of MMDeviceEnumerator coclass
-        NULL, CLSCTX_ALL,
-        IID_IMMDeviceEnumerator,  // GUID value of the IMMDeviceEnumerator
-                                    // interface
-        (void**)&pIMMD);
+    hr = CoCreateInstance(CLSID_MMDeviceEnumerator, NULL, CLSCTX_ALL, IID_IMMDeviceEnumerator, (void**)&pIMMD);
 
     if (FAILED(hr)) {
         LOG_ERROR( L"AudioDeviceWindowsCore::CoreAudioIsSupported() Failed to create the required COM object (hr=" << hr << L")");
@@ -693,8 +688,8 @@ AudioDeviceWindowsCore::Init()
     // Enumerate all audio rendering and capturing endpoint devices.
     // Note that, some of these will not be able to select by the user.
     // The complete collection is for internal use only.
-//        _EnumerateEndpointDevicesAll(eRender);
-//        _EnumerateEndpointDevicesAll(eCapture);
+    //        _EnumerateEndpointDevicesAll(eRender);
+    //        _EnumerateEndpointDevicesAll(eCapture);
 
     m_initialized = true;
 
