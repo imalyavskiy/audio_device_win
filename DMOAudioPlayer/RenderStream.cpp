@@ -48,7 +48,7 @@ const uint32_t wave_4cc = MAKEFOURCC('W', 'A', 'V', 'E');
 const uint32_t fmt_4cc  = MAKEFOURCC('f', 'm', 't', ' ');
 const uint32_t data_4cc = MAKEFOURCC('d', 'a', 't', 'a');
 
-https://msdn.microsoft.com/en-us/library/windows/desktop/dd370802(v=vs.85).aspx
+//https://msdn.microsoft.com/en-us/library/windows/desktop/dd370802(v=vs.85).aspx
 
 HRESULT PlayAudioStream(MyAudioSource *pMySource)
 {

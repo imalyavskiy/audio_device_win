@@ -11,7 +11,7 @@ struct PCMFormat
 
 struct PCMDataBuffer
 {
-    void* buffer;
+    void* p;
     uint32_t tsize; // total
     uint32_t asize; // actual
 };

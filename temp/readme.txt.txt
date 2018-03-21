@@ -1,0 +1,1 @@
+this folder is for keeping programs output - all files except this one are ignored here
