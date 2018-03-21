@@ -5,17 +5,20 @@
 class Converter
     : public ConverterInterface
 {
+    friend bool CreateConverter(const PCMFormat& format_in, const PCMFormat& format_out, std::shared_ptr<ConverterInterface>& p);
+
 public:
-    Converter();
     ~Converter();
+    Converter(const PCMFormat& format_in, const PCMFormat& format_out);
+
+protected:
+    bool initialize();
 
     // ConverterInterface
-    bool initialize(const uint32_t samplesPerSecond, const uint16_t channels, const uint32_t bitsPerSample) override;
-    bool convert() override;
-protected:
-    uint32_t m_samplesPerSecond = uint32_t(-1);
-    uint16_t m_channels         = uint16_t(-1);
-    uint32_t m_bitsPerSample    = uint32_t(-1);
+    bool convert(const PCMDataBuffer& buffer_in, const PCMDataBuffer& buffer_out) override;
+
+    const PCMFormat m_format_in;
+    const PCMFormat m_format_out;
 
     SRC_STATE * m_converter_inst;
 };
