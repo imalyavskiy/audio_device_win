@@ -1,3 +1,9 @@
 [submodule "minimp3"]
 	path = minimp3
 	url = https://github.com/imalyavskiy/minimp3.git
+[submodule "soxr"]
+	path = soxr
+	url = https://github.com/imalyavskiy/soxr
+[submodule "libsamplerate"]
+	path = libsamplerate
+	url = https://github.com/imalyavskiy/libsamplerate.git
