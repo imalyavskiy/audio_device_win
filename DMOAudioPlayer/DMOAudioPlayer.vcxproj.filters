@@ -48,7 +48,7 @@
     <ClInclude Include="AudioDeviceBufferInterface.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="RenderStream.h">
+    <ClInclude Include="PcmStreamRenderer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="AudioSourceInterface.h">
@@ -83,7 +83,7 @@
     <ClCompile Include="AudioDeviceBuffer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="RenderStream.cpp">
+    <ClCompile Include="PcmStreamRenderer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="AudioSource.cpp">

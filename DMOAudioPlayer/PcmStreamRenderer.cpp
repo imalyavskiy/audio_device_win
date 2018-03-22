@@ -11,7 +11,7 @@
 #include <mediaobj.h>        // IMediaObject
 
 #include "AudioSourceInterface.h"
-#include "RenderStream.h"
+#include "PcmStreamRenderer.h"
 
 //-----------------------------------------------------------
 // Play an audio stream on the default audio rendering
