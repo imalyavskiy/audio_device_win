@@ -7,20 +7,21 @@ struct PCMFormat
     const uint32_t samplesPerSecond;
     const uint16_t channels;
     const uint32_t bitsPerSample;
+    const uint32_t bytesPerFrame;
 };
 
 struct PCMDataBuffer
 {
     void* p;
-    uint32_t tsize; // total
-    uint32_t asize; // actual
+    uint32_t tsize;         // total
+    uint32_t asize;         // actual
 };
 
 struct ConverterInterface
 {
     virtual ~ConverterInterface() {};
 
-    virtual bool convert(const PCMDataBuffer& in, const PCMDataBuffer& out) = 0;
+    virtual bool convert(PCMDataBuffer& in, PCMDataBuffer& out, bool no_more_data) = 0;
 };
 
 bool CreateConverter(const PCMFormat& format_in, const PCMFormat& format_out, std::shared_ptr<ConverterInterface>& p);

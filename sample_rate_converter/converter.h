@@ -15,10 +15,23 @@ protected:
     bool initialize();
 
     // ConverterInterface
-    bool convert(const PCMDataBuffer& buffer_in, const PCMDataBuffer& buffer_out) override;
+    bool convert(PCMDataBuffer& buffer_in, PCMDataBuffer& buffer_out, bool no_more_data) override;
 
-    const PCMFormat m_format_in;
-    const PCMFormat m_format_out;
+    // utility
+    void update_proxy_buffers(const PCMDataBuffer& buffer_in, const PCMDataBuffer& buffer_out);
+
+    const PCMFormat        m_format_in;
+    const PCMFormat        m_format_out;
+
+    const double           m_conversion_ratio;
+
+    // used to convert signed 16 or signed 32 to float 
+    float*                 m_float_buffer_in    = nullptr;
+    size_t                 m_last_buffer_in_tsize  = 0;
+    
+    // and back
+    float*                 m_float_buffer_out   = nullptr;
+    size_t                 m_last_buffer_out_tsize = 0;
 
     SRC_STATE * m_converter_inst;
 };
