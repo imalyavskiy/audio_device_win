@@ -57,6 +57,12 @@
     <ClInclude Include="AudioSource.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="PcmStreamRendererInterface.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="common.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -87,6 +93,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="AudioSource.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PcmStreamRendererInterface.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="AudioSourceInterface.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

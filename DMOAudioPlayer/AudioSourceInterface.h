@@ -1,14 +1,19 @@
 #ifndef __AUDIO_SOURCE_INTERFACE_H__
 #define __AUDIO_SOURCE_INTERFACE_H__
 #pragma once
-
-struct AudioSourceInterface
+namespace WavAudioSource
 {
-    virtual ~AudioSourceInterface() {};
+    struct Interface
+    {
+        typedef std::shared_ptr<Interface> ptr;
 
-    virtual HRESULT GetFormat(std::unique_ptr<WAVEFORMATEXTENSIBLE>& pwfx) = 0;
-    virtual HRESULT ReadData(UINT32 bufferFrameCount, BYTE* pData, DWORD* pFlags) = 0;
+        virtual ~Interface() {};
 
-};
+        virtual bool GetFormat(PCMFormat& format) = 0;
+        virtual bool ReadData(UINT32 bufferFrameCount, BYTE* pData, DWORD* pFlags) = 0;
+    };
+
+    bool create(const std::string& file, std::shared_ptr<Interface>& source);
+}
 
 #endif // __AUDIO_SOURCE_INTERFACE_H__

@@ -12,6 +12,9 @@ struct PCMFormat
 
 struct PCMDataBuffer
 {
+    typedef std::shared_ptr<PCMDataBuffer> sptr;
+    typedef std::weak_ptr<PCMDataBuffer> wptr;
+    
     void* p;
     uint32_t tsize;         // total
     uint32_t asize;         // actual
@@ -19,6 +22,8 @@ struct PCMDataBuffer
 
 struct ConverterInterface
 {
+    typedef std::shared_ptr<ConverterInterface> ptr;
+
     virtual ~ConverterInterface() {};
 
     virtual bool convert(PCMDataBuffer& in, PCMDataBuffer& out, bool no_more_data) = 0;
