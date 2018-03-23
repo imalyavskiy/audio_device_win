@@ -17,7 +17,7 @@ bool CreateConverter(const PCMFormat& format_in, const PCMFormat& format_out, st
 }
 
 Converter::Converter(const PCMFormat& format_in, const PCMFormat& format_out)
-    : m_converter_inst(nullptr)
+    : m_converter_inst(nullptr, nullptr)
     , m_format_in(format_in)
     , m_format_out(format_out)
     , m_conversion_ratio((double)format_out.samplesPerSecond / (double)format_in.samplesPerSecond)
@@ -29,34 +29,17 @@ Converter::Converter(const PCMFormat& format_in, const PCMFormat& format_out)
 
 Converter::~Converter()
 {
-    if (m_float_buffer_in)
-    {
-        delete[] m_float_buffer_in;
-        m_float_buffer_in = nullptr;
-    }
-    
-    if (m_float_buffer_out)
-    {
-        delete[] m_float_buffer_out;
-        m_float_buffer_out = nullptr;
-    }
-
-    if(m_converter_inst)
-    {
-        src_delete(m_converter_inst);
-        m_converter_inst = nullptr;
-    }
 }
 
 bool Converter::initialize()
 {
     int error = SRC_ERR_NO_ERROR;
 
-    m_converter_inst = src_new(SRC_SINC_FASTEST, m_format_in.channels, &error);
+    m_converter_inst = ConverterInstancePtr(src_new(SRC_SINC_FASTEST, m_format_in.channels, &error), &src_delete);
     if (SRC_ERR_NO_ERROR != error )
         return false;
 
-    return (SRC_ERR_NO_ERROR == src_set_ratio(m_converter_inst, m_conversion_ratio));
+    return (SRC_ERR_NO_ERROR == src_set_ratio(m_converter_inst.get(), m_conversion_ratio));
 }
 
 void Converter::update_proxy_buffers(const PCMDataBuffer& buffer_in, const PCMDataBuffer& buffer_out)
@@ -67,10 +50,7 @@ void Converter::update_proxy_buffers(const PCMDataBuffer& buffer_in, const PCMDa
         const size_t in_buffer_capacity_in_samples 
             = buffer_in.tsize / (m_format_in.bytesPerFrame / m_format_in.channels);
 
-        if (m_float_buffer_in)
-            delete[] m_float_buffer_in;
-
-        m_float_buffer_in = (new float[in_buffer_capacity_in_samples]);
+        m_float_buffer_in.reset(new float[in_buffer_capacity_in_samples]);
 
         m_last_buffer_in_tsize = buffer_in.tsize;
     }
@@ -81,10 +61,7 @@ void Converter::update_proxy_buffers(const PCMDataBuffer& buffer_in, const PCMDa
         const size_t out_buffer_capacity_in_samples 
             = buffer_in.tsize / (m_format_out.bytesPerFrame / m_format_out.channels);
 
-        if (m_float_buffer_out)
-            delete[] m_float_buffer_out;
-
-        m_float_buffer_out = (new float[out_buffer_capacity_in_samples]);
+        m_float_buffer_out.reset(new float[out_buffer_capacity_in_samples]);
 
         m_last_buffer_out_tsize = buffer_out.tsize;
     }
@@ -110,35 +87,35 @@ bool Converter::convert(PCMDataBuffer& buffer_in, PCMDataBuffer& buffer_out, boo
 
     // copy data
     if (m_format_in.bitsPerSample == 16)        // from input short buffer to proxy float bufer
-        src_short_to_float_array((short*)buffer_in.p, m_float_buffer_in, actual_input_samples);
+        src_short_to_float_array((short*)buffer_in.p, m_float_buffer_in.get(), (int)actual_input_samples);
     else if (m_format_in.bitsPerSample == 32)   // from unput int buffer to proxy float bufer
-        src_int_to_float_array((int*)buffer_in.p, m_float_buffer_in, actual_input_samples);
+        src_int_to_float_array((int*)buffer_in.p, m_float_buffer_in.get(), (int)actual_input_samples);
     else                                        // error
         return false;
 
     // Fill convert request structure
     SRC_DATA src_data
     {
-        m_float_buffer_in,                              // data_in
-        m_float_buffer_out,                             // data_out
+        m_float_buffer_in.get(),                        // data_in
+        m_float_buffer_out.get(),                       // data_out
         buffer_in.asize / m_format_in.bytesPerFrame,    // input_frames     - actual number
         buffer_out.tsize / m_format_out.bytesPerFrame,  // output_frames    - maximum buffer capacity
-        0,                                              // input_frames_used
-        0,                                              // output_frames_gen
+        0L,                                             // input_frames_used
+        0L,                                             // output_frames_gen
         (int)no_more_data,                              // end_of_input
         m_conversion_ratio,                             // src_ratio
     };
 
     // process
     int error = SRC_ERR_NO_ERROR;
-    if (SRC_ERR_NO_ERROR != (error = src_process(m_converter_inst, &src_data)))
+    if (SRC_ERR_NO_ERROR != (error = src_process(m_converter_inst.get(), &src_data)))
         return false;
   
     // copy data
     if (m_format_in.bitsPerSample == 16)        // from proxy float buffer to output short buffer
-        src_float_to_short_array(m_float_buffer_out, (short*)buffer_out.p, src_data.output_frames_gen * m_format_out.channels);
+        src_float_to_short_array(m_float_buffer_out.get(), (short*)buffer_out.p, src_data.output_frames_gen * m_format_out.channels);
     else if (m_format_in.bitsPerSample == 32)   // from proxy float buffer to output int buffer
-        src_float_to_int_array(m_float_buffer_out, (int*)buffer_out.p, src_data.output_frames_gen * m_format_out.channels);
+        src_float_to_int_array(m_float_buffer_out.get(), (int*)buffer_out.p, src_data.output_frames_gen * m_format_out.channels);
     
     // 
     buffer_out.asize = src_data.output_frames_gen * m_format_out.bytesPerFrame;

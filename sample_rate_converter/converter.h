@@ -26,14 +26,17 @@ protected:
     const double           m_conversion_ratio;
 
     // used to convert signed 16 or signed 32 to float 
-    float*                 m_float_buffer_in    = nullptr;
+    std::unique_ptr<float[]> 
+                           m_float_buffer_in;
     size_t                 m_last_buffer_in_tsize  = 0;
-    
+
     // and back
-    float*                 m_float_buffer_out   = nullptr;
+    std::unique_ptr<float[]>
+                           m_float_buffer_out;
     size_t                 m_last_buffer_out_tsize = 0;
 
-    SRC_STATE * m_converter_inst;
+    typedef std::unique_ptr<SRC_STATE, decltype(&src_delete)> ConverterInstancePtr;
+    ConverterInstancePtr     m_converter_inst;
 };
 
 #endif //__CONVERTER_H__
