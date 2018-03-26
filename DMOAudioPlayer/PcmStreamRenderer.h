@@ -85,11 +85,11 @@ namespace PcmSrtreamRenderer
         // queue of the buffers that are rendered
         //  populated by PutBufferInternal
         //  grabbed by GetBuffer
-        BUFFER_QUEUE                m_freeBufffers;
+        BUFFER_QUEUE                m_freeBufffersQueue;
 
         // overall bufer list
         //  populated by SetFormat
-        BUFFER_LIST   m_bufferStorage;
+        BUFFER_LIST                 m_bufferStorage;
 
         // audio rendering endpoint buffer total frame count
         uint32_t                    m_bufferFrameCount;

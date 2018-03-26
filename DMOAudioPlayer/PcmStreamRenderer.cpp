@@ -85,6 +85,17 @@ namespace PcmSrtreamRenderer
 
         m_state = STATE_STOPPED;
 
+        const size_t buffer_size = m_format_in->bytesPerFrame * buffer_frames;
+
+        for(size_t cBuffer = 0; cBuffer < buffers_total; ++cBuffer)
+        {
+            PCMDataBuffer::sptr pB;
+            pB.reset(new PCMDataBuffer{ new uint8_t[buffer_size], 0, (const uint32_t)buffer_size });
+            m_bufferStorage.push_back(pB);
+            m_freeBufffersQueue.push(pB);
+            ReleaseSemaphore(m_hFreeDataBuffersSemaphore, 1, nullptr);
+        }
+
         return true;
     }
 
@@ -180,8 +191,8 @@ namespace PcmSrtreamRenderer
             AutoLock l(m_cs);
 
             // get free buffer
-            buffer = m_freeBufffers.front();
-            m_freeBufffers.pop();
+            buffer = m_freeBufffersQueue.front();
+            m_freeBufffersQueue.pop();
         }
 
         return true;
@@ -226,7 +237,7 @@ namespace PcmSrtreamRenderer
 
                 {
                     AutoLock l(m_cs);
-                    m_freeBufffers.push(buffer);
+                    m_freeBufffersQueue.push(buffer);
                     ReleaseSemaphore(m_hFreeDataBuffersSemaphore, 1, nullptr);
                 }
 
@@ -272,7 +283,7 @@ namespace PcmSrtreamRenderer
         {
             // put buffer to the free buffers queue
             AutoLock l(m_cs);
-            m_freeBufffers.push(buffer);
+            m_freeBufffersQueue.push(buffer);
 
             // notify waiter about new free buffer
             ReleaseSemaphore(m_hFreeDataBuffersSemaphore, 1, nullptr);
