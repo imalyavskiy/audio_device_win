@@ -62,6 +62,9 @@ namespace WavAudioSource
             }
         }
 
+        m_data_chunk_bytes_total = m_wave_riff->data_chunk->pos_end - m_wave_riff->data_chunk->pos_begin;
+        m_data_chunk_bytes_rest = m_data_chunk_bytes_total;
+
         m_source_data.clear();
         m_source_data.seekg(0, std::ios_base::beg);
 
@@ -209,5 +212,36 @@ namespace WavAudioSource
         }
 
         return SUCCEEDED(S_FALSE);
+    }
+
+    bool
+    Implementation::ReadData(std::shared_ptr<PCMDataBuffer> buffer)
+    {
+        assert(m_source_data.is_open());
+        std::ios_base::iostate rdstate = std::ios_base::goodbit;
+
+        assert(0 == (buffer->tsize % m_wave_riff->format_chunk->nBlockAlign));
+        if (buffer->tsize % m_wave_riff->format_chunk->nBlockAlign != 0)
+            return false;
+
+        std::streampos curr_pos = m_source_data.tellg();
+        if ((curr_pos < m_wave_riff->data_chunk->pos_begin) || (m_wave_riff->data_chunk->pos_end < curr_pos))
+            m_source_data.seekg(m_wave_riff->data_chunk->pos_begin, std::ios_base::beg);
+
+        m_source_data.read(reinterpret_cast<char*>(buffer->p), std::streamsize(buffer->tsize));
+
+        rdstate = m_source_data.rdstate();
+        
+        buffer->asize = m_source_data.gcount();
+
+        m_data_chunk_bytes_rest -= std::streampos(buffer->asize);
+
+        if ((std::ios_base::failbit|std::ios_base::eofbit) & rdstate > 0)
+        {
+            buffer->last = true;
+            return SUCCEEDED(buffer->asize > 0 ? S_FALSE : E_FAIL);
+        }
+
+        return SUCCEEDED(S_OK);
     }
 }

@@ -15,9 +15,16 @@ struct PCMDataBuffer
     typedef std::shared_ptr<PCMDataBuffer> sptr;
     typedef std::weak_ptr<PCMDataBuffer> wptr;
     
+    // buffer
     void* p;
-    uint32_t tsize;         // total
-    uint32_t asize;         // actual
+
+    // total
+    uint32_t tsize;
+
+    // actual
+    uint32_t asize;
+
+    bool     last;
 };
 
 struct ConverterInterface

@@ -87,6 +87,7 @@ namespace WavAudioSource
 
         virtual bool GetFormat(PCMFormat& format) override;
         virtual bool ReadData(UINT32 bufferFrameCount, BYTE* pData, DWORD* pFlags) override;
+        virtual bool ReadData(std::shared_ptr<PCMDataBuffer> buffer) override;
 
         bool ReadWafeRiff(const std::streampos& begin, const std::streampos& end, std::unique_ptr<WaveRiff>& wave_riff);
         bool ReadFMTChunk(const std::streampos& begin, const ChunkDescriptor& chunk_descr, std::unique_ptr<FmtChunk>& fmt_chunk);
@@ -95,6 +96,8 @@ namespace WavAudioSource
     protected:
         std::ifstream  m_source_data;
         std::streamoff m_file_size;
+        std::streampos m_data_chunk_bytes_total = 0;
+        std::streampos m_data_chunk_bytes_rest  = 0;
 
         std::unique_ptr<WaveRiff> m_wave_riff;
     };

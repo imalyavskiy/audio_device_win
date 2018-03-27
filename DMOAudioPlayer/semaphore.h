@@ -4,28 +4,28 @@
 class semaphore
 {
 private:
-    std::mutex mutex_;
-    std::condition_variable condition_;
-    unsigned long count_ = 0; // Initialized as locked.
+    std::mutex m;
+    std::condition_variable cv;
+    unsigned long c = 0; // Initialized as locked.
 
 public:
     void notify() {
-        std::unique_lock<decltype(mutex_)> lock(mutex_);
-        ++count_;
-        condition_.notify_one();
+        std::unique_lock<decltype(m)> l(m);
+        ++c;
+        cv.notify_one();
     }
 
     void wait() {
-        std::unique_lock<decltype(mutex_)> lock(mutex_);
-        while (!count_) // Handle spurious wake-ups.
-            condition_.wait(lock);
-        --count_;
+        std::unique_lock<decltype(m)> l(m);
+        while (!c) // Handle spurious wake-ups.
+            cv.wait(l);
+        --c;
     }
 
     bool try_wait() {
-        std::unique_lock<decltype(mutex_)> lock(mutex_);
-        if (count_) {
-            --count_;
+        std::unique_lock<decltype(m)> l(m);
+        if (c) {
+            --c;
             return true;
         }
         return false;

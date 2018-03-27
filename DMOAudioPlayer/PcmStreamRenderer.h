@@ -23,6 +23,12 @@ namespace PcmSrtreamRenderer
     class Implementation
         : public Interface
     {
+        typedef std::queue<PCMDataBuffer::wptr> BUFFER_QUEUE;
+        typedef std::list<PCMDataBuffer::sptr>  BUFFER_LIST;
+
+        inline uint32_t frames_to_bytes(const uint32_t& frames) const { return m_format_render->bytesPerFrame * frames; };
+        inline uint32_t bytes_to_frames(const uint32_t& bytes) const { return bytes / m_format_render->bytesPerFrame; };
+
     public:
         Implementation();
         ~Implementation();
@@ -44,7 +50,6 @@ namespace PcmSrtreamRenderer
         static DWORD WINAPI DoRenderThread(LPVOID param);
 
         HRESULT DoRender();
-        HRESULT ProcessBuffer(std::weak_ptr<PCMDataBuffer> buffer);
 
         bool    InternalGetBuffer(std::weak_ptr<PCMDataBuffer>& buffer);
         bool    InternalPutBuffer(std::weak_ptr<PCMDataBuffer>& buffer);
@@ -52,7 +57,15 @@ namespace PcmSrtreamRenderer
     protected:
         ScopedCOMInitializer        m_com_guard;
 
-        state                       m_state = STATE_NONE;
+        std::atomic<state>          m_state = STATE_NONE;
+
+        bool                        m_rendering_started = false;
+        PBYTE                       m_rendering_buffer = NULL;
+        UINT32                      m_rendering_buffer_frames_total = 0;
+        UINT32                      m_rendering_buffer_frames_avaliable = 0;
+        UINT32                      m_rendering_buffer_frames_rest = 0;
+        PCMDataBuffer::wptr         m_rendering_partially_processed_buffer;
+        REFERENCE_TIME              m_rendering_buffer_duration = 0;
 
         IMMDeviceEnumeratorPtr      m_pEnumerator;
         IMMDevicePtr                m_pDevice;
@@ -74,9 +87,6 @@ namespace PcmSrtreamRenderer
         HANDLE                      m_hNewDataBufferSemaphore;
         HANDLE                      m_hFreeDataBuffersSemaphore;
 
-        typedef std::queue<PCMDataBuffer::wptr> BUFFER_QUEUE;
-        typedef std::list<PCMDataBuffer::sptr>  BUFFER_LIST;
-
         // queue of the buffers with rendering data
         //  populated by PutBuffer
         //  grabbed by GetBufferInternal
@@ -91,8 +101,6 @@ namespace PcmSrtreamRenderer
         //  populated by SetFormat
         BUFFER_LIST                 m_bufferStorage;
 
-        // audio rendering endpoint buffer total frame count
-        uint32_t                    m_bufferFrameCount;
     };
 }
 

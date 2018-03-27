@@ -11,6 +11,7 @@ namespace WavAudioSource
 
         virtual bool GetFormat(PCMFormat& format) = 0;
         virtual bool ReadData(UINT32 bufferFrameCount, BYTE* pData, DWORD* pFlags) = 0;
+        virtual bool ReadData(std::shared_ptr<PCMDataBuffer> buffer) = 0;
     };
 
     bool create(const std::string& file, std::shared_ptr<Interface>& source);
