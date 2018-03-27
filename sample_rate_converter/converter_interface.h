@@ -25,6 +25,9 @@ struct PCMDataBuffer
     uint32_t asize;
 
     bool     last;
+
+    std::streampos start;
+    std::streampos end;
 };
 
 struct ConverterInterface

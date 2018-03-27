@@ -18,7 +18,7 @@ namespace PcmSrtreamRenderer
     typedef CComPtr<IMMDeviceEnumerator> IMMDeviceEnumeratorPtr;    // https://msdn.microsoft.com/en-us/library/windows/desktop/dd371399(v=vs.85).aspx
     typedef CComPtr<IMMDevice>           IMMDevicePtr;              // https://msdn.microsoft.com/en-us/library/windows/desktop/dd371395(v=vs.85).aspx
     typedef CComPtr<IAudioClient>        IAudioClientPtr;           // https://msdn.microsoft.com/en-us/library/windows/desktop/dd370865(v=vs.85).aspx
-    typedef CComPtr<IAudioRenderClient>  IAudioRenderClientPtr;
+    typedef CComPtr<IAudioRenderClient>  IAudioRenderClientPtr;     // https://msdn.microsoft.com/en-us/library/dd368242(v=vs.85).aspx
 
     class Implementation
         : public Interface

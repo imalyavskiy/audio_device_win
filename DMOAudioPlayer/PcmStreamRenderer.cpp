@@ -29,7 +29,7 @@ namespace PcmSrtreamRenderer
     {
         HRESULT                     hr = S_OK;
         ComUniquePtr<WAVEFORMATEX>  p_mix_format(nullptr, nullptr);
-        REFERENCE_TIME              rtRequestedDuration = REFTIMES_PER_SEC;
+        REFERENCE_TIME              rtRequestedDuration = REFTIMES_PER_SEC * 2;
 
         // check state
         assert(m_state == STATE_NONE);
@@ -37,45 +37,74 @@ namespace PcmSrtreamRenderer
             return false;
 
         // create multimedia device enumerator
-        if (FAILED(hr = CoCreateInstance(__uuidof(MMDeviceEnumerator), NULL, CLSCTX_ALL, __uuidof(IMMDeviceEnumerator), (void**)&m_pEnumerator)))
+        hr = CoCreateInstance(__uuidof(MMDeviceEnumerator), NULL, CLSCTX_ALL, __uuidof(IMMDeviceEnumerator), (void**)&m_pEnumerator);
+        assert(S_OK == hr);
+        if (FAILED(hr))
             return SUCCEEDED(hr);
 
         // retrieve the default audio endpoint for the specified data-flow direction and role.
-        if (FAILED(hr = m_pEnumerator->GetDefaultAudioEndpoint(eRender, eConsole, &m_pDevice))) // see https://msdn.microsoft.com/en-us/library/windows/desktop/dd370813(v=vs.85).aspx for eConsole
+        hr = m_pEnumerator->GetDefaultAudioEndpoint(eRender, eConsole, &m_pDevice);
+        assert(S_OK == hr);
+        if (FAILED(hr)) // see https://msdn.microsoft.com/en-us/library/windows/desktop/dd370813(v=vs.85).aspx for eConsole
             return SUCCEEDED(hr);
 
         // create AudioClient
-        if (FAILED(hr = m_pDevice->Activate(__uuidof(IAudioClient), CLSCTX_ALL, NULL, (void**)&m_pAudioClient)))
+        hr = m_pDevice->Activate(__uuidof(IAudioClient), CLSCTX_ALL, NULL, (void**)&m_pAudioClient);
+        assert(S_OK == hr);
+        if (FAILED(hr))
             return SUCCEEDED(hr);
 
         // retrieve the stream format that the audio engine uses for its internal processing of shared-mode streams
         {
-            WAVEFORMATEX* tmp;
-            if (FAILED(hr = m_pAudioClient->GetMixFormat(&tmp)))
+            WAVEFORMATEX* mix_format = nullptr;
+            hr = m_pAudioClient->GetMixFormat(&mix_format);
+            assert(S_OK == hr);
+            if (FAILED(hr))
                 return SUCCEEDED(hr);
-            p_mix_format = ComUniquePtr<WAVEFORMATEX>{ tmp, &CoTaskMemFree};
+
+            WAVEFORMATEXTENSIBLE* pext = reinterpret_cast<WAVEFORMATEXTENSIBLE*>(mix_format);
+
+            p_mix_format = ComUniquePtr<WAVEFORMATEX>{ mix_format, &CoTaskMemFree};
+
+            WAVEFORMATEX* closest_format = nullptr;
+            hr = m_pAudioClient->IsFormatSupported(AUDCLNT_SHAREMODE_SHARED, mix_format, &closest_format);
+            assert(S_OK == hr);
+            if (closest_format)
+                CoTaskMemFree(closest_format);
+            
+            if (FAILED(hr))
+                return SUCCEEDED(hr);
         }
 
         // apply the rendering format
-        if (FAILED(hr = m_pAudioClient->Initialize(AUDCLNT_SHAREMODE_SHARED, 0, rtRequestedDuration, 0, reinterpret_cast<WAVEFORMATEX*>(p_mix_format.get()), NULL)))
+        hr = m_pAudioClient->Initialize(AUDCLNT_SHAREMODE_SHARED, 0, rtRequestedDuration, 0, p_mix_format.get(), NULL);
+        assert(S_OK == hr);
+        if (FAILED(hr))
             return SUCCEEDED(hr);
 
         // keep the rendering format
         m_format_render.reset(new PCMFormat{ p_mix_format->nSamplesPerSec, p_mix_format->nChannels, p_mix_format->wBitsPerSample, p_mix_format->nBlockAlign });
 
         // Get the actual size of the allocated buffer.
-        if (FAILED(hr = m_pAudioClient->GetBufferSize(&m_rendering_buffer_frames_total)))
+        hr = m_pAudioClient->GetBufferSize(&m_rendering_buffer_frames_total);
+        assert(S_OK == hr);
+        if (FAILED(hr))
             return hr;
 
         // retireve the renderer client pointer
-        if (FAILED(hr = m_pAudioClient->GetService(__uuidof(IAudioRenderClient), (void**)&m_pRenderClient)))
+        hr = m_pAudioClient->GetService(__uuidof(IAudioRenderClient), (void**)&m_pRenderClient);
+        assert(S_OK == hr);
+        if (FAILED(hr))
             return hr;
 
         // calculate rendering buffer total duration
-        m_rendering_buffer_duration = ((double)REFTIMES_PER_SEC * m_rendering_buffer_frames_total) / m_format_render->samplesPerSecond;
+        m_rendering_buffer_duration = (REFERENCE_TIME)((double)REFTIMES_PER_SEC * m_rendering_buffer_frames_total) / m_format_render->samplesPerSecond;
 
+        // retrieve stream latency
         REFERENCE_TIME rtStreamLatency = 0;
-        if (FAILED(hr = m_pAudioClient->GetStreamLatency(&rtStreamLatency)))
+        hr = m_pAudioClient->GetStreamLatency(&rtStreamLatency);
+        assert(S_OK == hr);
+        if (FAILED(hr))
             return hr;
 
         // update state - we are ready to consume data
@@ -286,15 +315,22 @@ namespace PcmSrtreamRenderer
             if (!m_rendering_buffer)
             {
                 UINT32 rendering_buffer_frames_padding = 0;
-                // see how much buffer space is available.
-                if (FAILED(hr = m_pAudioClient->GetCurrentPadding(&rendering_buffer_frames_padding)))
-                    return hr;
+                if(m_rendering_started)
+                {
+                    // see how much buffer space is available.
+                    hr = m_pAudioClient->GetCurrentPadding(&rendering_buffer_frames_padding);
+                    assert(S_OK == hr);
+                    if (FAILED(hr))
+                        return hr;
+                }
 
                 // calc avaliable buffer frames
                 m_rendering_buffer_frames_avaliable = m_rendering_buffer_frames_total - rendering_buffer_frames_padding;
 
                 // grab the avaliable buffer
-                if (FAILED(hr = m_pRenderClient->GetBuffer(m_rendering_buffer_frames_avaliable, &m_rendering_buffer)))
+                hr = m_pRenderClient->GetBuffer(m_rendering_buffer_frames_avaliable, &m_rendering_buffer);
+                assert(S_OK == hr);
+                if (FAILED(hr))
                     return hr;
 
                 std::cout << "Got buffer of " << m_rendering_buffer_frames_avaliable << " frames" << std::endl;
@@ -307,18 +343,22 @@ namespace PcmSrtreamRenderer
             const uint32_t offset_frames = m_rendering_buffer_frames_avaliable - m_rendering_buffer_frames_rest;
 
             // bytes to copy from the source buffer
-            const uint32_t frames_to_render = m_rendering_buffer_frames_rest < bytes_to_frames(sbuffer->asize) ? m_rendering_buffer_frames_rest : bytes_to_frames(sbuffer->asize);
+            const uint32_t frames_in_buffer  = bytes_to_frames(sbuffer->asize);
+            const uint32_t frames_to_render = m_rendering_buffer_frames_rest < frames_in_buffer ? m_rendering_buffer_frames_rest : frames_in_buffer;
 
             // copy bytes_to_render bytes from source buffer to rendering buffer
-            memcpy(m_rendering_buffer + frames_to_bytes(offset_frames), sbuffer->p, frames_to_bytes(frames_to_render));
+            const size_t offset_bytes       = frames_to_bytes(offset_frames);
+            const size_t bytes_to_render    = frames_to_bytes(frames_to_render);
+
+            memcpy(m_rendering_buffer + offset_bytes, sbuffer->p, bytes_to_render);
 
             // reduce the rest of rendering buffer with copied data 
             m_rendering_buffer_frames_rest -= frames_to_render;
 
             // once hte buffer had processed partially - keep it for the next session
-            if (frames_to_render < bytes_to_frames(sbuffer->asize))
+            if (frames_to_render < frames_in_buffer)
             {
-                // how many bytes to keed in the source buffer
+                // how many bytes to keep in the source buffer
                 sbuffer->asize -= frames_to_bytes(frames_to_render);
 
                 // move kept bytes to the source buffer beginning
@@ -336,6 +376,9 @@ namespace PcmSrtreamRenderer
             {
                 // TODO: the last parameter is here https://msdn.microsoft.com/en-us/library/windows/desktop/dd371458(v=vs.85).aspx
                 hr = m_pRenderClient->ReleaseBuffer(m_rendering_buffer_frames_avaliable, 0);
+                assert(S_OK == hr);
+                if (FAILED(hr))
+                    return hr;
 
                 std::cout << "Released the buffer" << std::endl;
 
@@ -343,7 +386,10 @@ namespace PcmSrtreamRenderer
 
                 if (!m_rendering_started)
                 {
-                    if (FAILED(hr = m_pAudioClient->Start()))  // start playing.
+                    // start playing.
+                    hr = m_pAudioClient->Start();
+                    assert(S_OK == hr);
+                    if (FAILED(hr))
                         return hr;
 
                     std::cout << "Started rendering" << std::endl;
@@ -352,13 +398,15 @@ namespace PcmSrtreamRenderer
                 }
 
                 REFERENCE_TIME rtStreamLatency = 0;
-                if (FAILED(hr = m_pAudioClient->GetStreamLatency(&rtStreamLatency)))
+                hr = m_pAudioClient->GetStreamLatency(&rtStreamLatency);
+                assert(S_OK == hr);
+                if (FAILED(hr))
                     return hr;
 
                 std::cout << "Stream latency " << rtStreamLatency << "." << std::endl;
 
                 // sleep for half the buffer duration.
-                Sleep((DWORD)(m_rendering_buffer_duration / REFTIMES_PER_MILLISEC / 2));
+                Sleep((DWORD)(m_rendering_buffer_duration / REFTIMES_PER_MILLISEC / 4));
             }
 
             if (sbuffer)
