@@ -19,6 +19,7 @@ namespace PcmSrtreamRenderer
     typedef CComPtr<IMMDevice>           IMMDevicePtr;              // https://msdn.microsoft.com/en-us/library/windows/desktop/dd371395(v=vs.85).aspx
     typedef CComPtr<IAudioClient>        IAudioClientPtr;           // https://msdn.microsoft.com/en-us/library/windows/desktop/dd370865(v=vs.85).aspx
     typedef CComPtr<IAudioRenderClient>  IAudioRenderClientPtr;     // https://msdn.microsoft.com/en-us/library/dd368242(v=vs.85).aspx
+    typedef CComPtr<ISimpleAudioVolume>  ISimpleAudioVolumePtr;     // https://msdn.microsoft.com/en-us/library/dd316531(v=vs.85).aspx
 
     class Implementation
         : public Interface
@@ -71,6 +72,7 @@ namespace PcmSrtreamRenderer
         IMMDevicePtr                m_pDevice;
         IAudioClientPtr             m_pAudioClient;
         IAudioRenderClientPtr       m_pRenderClient;
+        ISimpleAudioVolumePtr       m_pVolumeControl;
 
         std::unique_ptr<PCMFormat>  m_format_in;
         std::unique_ptr<size_t>     m_buffer_frames;
@@ -81,11 +83,11 @@ namespace PcmSrtreamRenderer
 
         CriticalSection             m_cs;
 
-        HANDLE                      m_hRenderThread;
-        DWORD                       m_dwThreadId;
-        HANDLE                      m_hRenderThreadExitEvent;
-        HANDLE                      m_hNewDataBufferSemaphore;
-        HANDLE                      m_hFreeDataBuffersSemaphore;
+        HANDLE                      m_hRenderThread = NULL;
+        DWORD                       m_dwThreadId = 0;
+        HANDLE                      m_hRenderThreadExitEvent = NULL;
+        HANDLE                      m_hNewDataBufferSemaphore = NULL;
+        HANDLE                      m_hFreeDataBuffersSemaphore = NULL;
 
         // queue of the buffers with rendering data
         //  populated by PutBuffer

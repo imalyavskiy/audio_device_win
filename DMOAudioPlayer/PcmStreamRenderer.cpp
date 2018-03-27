@@ -97,6 +97,19 @@ namespace PcmSrtreamRenderer
         if (FAILED(hr))
             return hr;
 
+        // retrieve volume control interface
+        hr = m_pAudioClient->GetService(__uuidof(ISimpleAudioVolume), (void**)&m_pVolumeControl);
+        assert(S_OK == hr);
+        if (FAILED(hr))
+            return hr;
+
+        // get volume level
+        float level = .0;
+        hr = m_pVolumeControl->GetMasterVolume(&level);
+        assert(S_OK == hr);
+        if (FAILED(hr))
+            return hr;
+
         // calculate rendering buffer total duration
         m_rendering_buffer_duration = (REFERENCE_TIME)((double)REFTIMES_PER_SEC * m_rendering_buffer_frames_total) / m_format_render->samplesPerSecond;
 
