@@ -436,6 +436,8 @@ namespace PcmSrtreamRenderer
                 // finally fulfilled the rendering buffer
                 if (SUCCEEDED(hr))
                 {
+                    bool leave = (S_FALSE == hr);
+                    
                     // let the device to render buffer
                     hr = m_pRenderClient->ReleaseBuffer(rendering_buffer_frames_actual, 0);
                     assert(S_OK == hr);
@@ -474,7 +476,7 @@ namespace PcmSrtreamRenderer
                     Sleep((DWORD)(m_rendering_buffer_duration / REFTIMES_PER_MILLISEC / 4));
 
                     // once the buffer fillled partially this means no more data available
-                    if (S_FALSE == hr)
+                    if (leave)
                         break;
                 }
             }
