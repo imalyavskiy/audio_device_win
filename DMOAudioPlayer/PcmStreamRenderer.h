@@ -27,11 +27,11 @@ namespace PcmSrtreamRenderer
         typedef std::queue<PCMDataBuffer::wptr> BUFFER_QUEUE;
         typedef std::list<PCMDataBuffer::sptr>  BUFFER_LIST;
 
-        inline uint32_t frames_to_bytes(const uint32_t& frames) const { return m_format_render->bytesPerFrame * frames; };
-        inline uint32_t bytes_to_frames(const uint32_t& bytes) const { return bytes / m_format_render->bytesPerFrame; };
+        inline std::streamsize frames_to_bytes(const std::streamsize& frames) const { return m_format_render->bytesPerFrame * frames; };
+        inline std::streamsize bytes_to_frames(const std::streamsize& bytes) const { return bytes / m_format_render->bytesPerFrame; };
 
     public:
-        Implementation();
+        Implementation(const std::string& dump_file);
         ~Implementation();
 
         bool    Init();
@@ -60,12 +60,7 @@ namespace PcmSrtreamRenderer
 
         std::atomic<state>          m_state = STATE_NONE;
 
-        bool                        m_rendering_started = false;
-        PBYTE                       m_rendering_buffer = NULL;
         UINT32                      m_rendering_buffer_frames_total = 0;
-        UINT32                      m_rendering_buffer_frames_avaliable = 0;
-        UINT32                      m_rendering_buffer_frames_rest = 0;
-        PCMDataBuffer::wptr         m_rendering_partially_processed_buffer;
         REFERENCE_TIME              m_rendering_buffer_duration = 0;
 
         IMMDeviceEnumeratorPtr      m_pEnumerator;
@@ -103,6 +98,7 @@ namespace PcmSrtreamRenderer
         //  populated by SetFormat
         BUFFER_LIST                 m_bufferStorage;
 
+        const std::string           m_dump_file;
     };
 }
 

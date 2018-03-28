@@ -15,19 +15,19 @@ struct PCMDataBuffer
     typedef std::shared_ptr<PCMDataBuffer> sptr;
     typedef std::weak_ptr<PCMDataBuffer> wptr;
     
+    inline void reset() { asize = 0; last = 0; };
+
     // buffer
-    void* p;
+    void * const p; // const pointer to modifiable data
 
     // total
-    uint32_t tsize;
+    const std::streamsize tsize;
 
     // actual
-    uint32_t asize;
+    std::streamsize asize;
 
+    // is it the last buffer in the sequence
     bool     last;
-
-    std::streampos start;
-    std::streampos end;
 };
 
 struct ConverterInterface

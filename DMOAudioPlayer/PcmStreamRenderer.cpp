@@ -8,12 +8,13 @@
 const size_t DATA_BUFFERS_MAX = 100;
 namespace PcmSrtreamRenderer
 {
-    Implementation::Implementation()
+    Implementation::Implementation(const std::string& dump_file)
         : m_hRenderThread(NULL)
         , m_dwThreadId(0)
         , m_hRenderThreadExitEvent(CreateEvent(NULL, TRUE, FALSE, NULL))
         , m_hNewDataBufferSemaphore(CreateSemaphore(NULL, 0, DATA_BUFFERS_MAX, NULL))
         , m_hFreeDataBuffersSemaphore(CreateSemaphore(NULL, 0, DATA_BUFFERS_MAX, NULL))
+        , m_dump_file(dump_file)
     {
         assert(m_hNewDataBufferSemaphore != NULL && m_hNewDataBufferSemaphore != INVALID_HANDLE_VALUE);
         assert(m_hRenderThreadExitEvent != NULL && m_hRenderThreadExitEvent != INVALID_HANDLE_VALUE);
@@ -211,15 +212,13 @@ namespace PcmSrtreamRenderer
             assert(TRUE == bResult);
 
             // wait 10 seconds until thread will exit
-            if (WAIT_TIMEOUT == WaitForSingleObject(m_hRenderThread, 10000))
+            if (WAIT_TIMEOUT == WaitForSingleObject(m_hRenderThread, 60000))
             {
-                // something went wrong
-                throw std::logic_error("rendere thread stucked.");
+                // finally close it
+                CloseHandle(m_hRenderThread);
+                m_hRenderThread = NULL;
             }
 
-            // finally close it
-            CloseHandle(m_hRenderThread);
-            m_hRenderThread = NULL;
         }
 
         // update state
@@ -299,138 +298,169 @@ namespace PcmSrtreamRenderer
     Implementation::DoRender()
     {
         HRESULT hr = S_OK;
+        std::ofstream out_file;
+        if(0 < m_dump_file.length())
+            out_file.open("C:\\Users\\developer\\etc\\DMOAudioPlayer\\temp\\48000_32bps_2ch.raw", std::ios_base::out | std::ios_base::binary);
+
+        bool                rendering_started                   = false;
+
+        PBYTE               rendering_buffer                    = NULL;
+
+        UINT32              rendering_buffer_frames_avaliable   = 0;
+        UINT32              rendering_buffer_frames_used        = 0;
+        UINT32              rendering_buffer_frames_rest        = 0;
+
+
+        PCMDataBuffer::wptr rendering_partially_processed_buffer;
 
         // render loop
-        while (true)
-        {
-            std::shared_ptr<PCMDataBuffer> sbuffer;
-
-            // shose buffer
-            if (!m_rendering_partially_processed_buffer.expired())
-            {// take the partially processed one
-                sbuffer = m_rendering_partially_processed_buffer.lock();
-                m_rendering_partially_processed_buffer.reset();
-            }
-            else
-            {// or brand new
-                std::weak_ptr<PCMDataBuffer> wbuffer;
-
-                if (!InternalGetBuffer(wbuffer))
-                    return E_FAIL;
-
-                if (wbuffer.expired())
-                    return E_FAIL;
-
-                sbuffer = wbuffer.lock();
-            }
-
-            // take the rendering buffer
-            if (!m_rendering_buffer)
+        try{
+            while (true)
             {
-                UINT32 rendering_buffer_frames_padding = 0;
-                if(m_rendering_started)
-                {
-                    // see how much buffer space is available.
-                    hr = m_pAudioClient->GetCurrentPadding(&rendering_buffer_frames_padding);
-                    assert(S_OK == hr);
-                    if (FAILED(hr))
-                        return hr;
+                std::shared_ptr<PCMDataBuffer> sbuffer;
+
+                // shose buffer
+                if (!rendering_partially_processed_buffer.expired())
+                {// take the partially processed one
+                    sbuffer = rendering_partially_processed_buffer.lock();
+                    rendering_partially_processed_buffer.reset();
+                }
+                else
+                {// or brand new
+                    std::weak_ptr<PCMDataBuffer> wbuffer;
+
+                    if (!InternalGetBuffer(wbuffer))
+                        throw std::exception("Failed to get sourse buffer");
+
+                    if (wbuffer.expired())
+                        throw std::exception("Source buffer has been expired.");
+
+                    sbuffer = wbuffer.lock();
                 }
 
-                // calc avaliable buffer frames
-                m_rendering_buffer_frames_avaliable = m_rendering_buffer_frames_total - rendering_buffer_frames_padding;
-
-                // grab the avaliable buffer
-                hr = m_pRenderClient->GetBuffer(m_rendering_buffer_frames_avaliable, &m_rendering_buffer);
-                assert(S_OK == hr);
-                if (FAILED(hr))
-                    return hr;
-
-                std::cout << "Got buffer of " << m_rendering_buffer_frames_avaliable << " frames" << std::endl;
-
-                // at this point rest frames are of the same value as avaliable
-                m_rendering_buffer_frames_rest = m_rendering_buffer_frames_avaliable;
-            }
-
-            // offset in the rendering buffer
-            const uint32_t offset_frames = m_rendering_buffer_frames_avaliable - m_rendering_buffer_frames_rest;
-
-            // bytes to copy from the source buffer
-            const uint32_t frames_in_buffer  = bytes_to_frames(sbuffer->asize);
-            const uint32_t frames_to_render = m_rendering_buffer_frames_rest < frames_in_buffer ? m_rendering_buffer_frames_rest : frames_in_buffer;
-
-            // copy bytes_to_render bytes from source buffer to rendering buffer
-            const size_t offset_bytes       = frames_to_bytes(offset_frames);
-            const size_t bytes_to_render    = frames_to_bytes(frames_to_render);
-
-            memcpy(m_rendering_buffer + offset_bytes, sbuffer->p, bytes_to_render);
-
-            // reduce the rest of rendering buffer with copied data 
-            m_rendering_buffer_frames_rest -= frames_to_render;
-
-            // once hte buffer had processed partially - keep it for the next session
-            if (frames_to_render < frames_in_buffer)
-            {
-                // how many bytes to keep in the source buffer
-                sbuffer->asize -= frames_to_bytes(frames_to_render);
-
-                // move kept bytes to the source buffer beginning
-                memmove(sbuffer->p, ((char*)sbuffer->p + frames_to_bytes(frames_to_render)), sbuffer->asize);
-
-                // keep the buffer separately
-                m_rendering_partially_processed_buffer = sbuffer;
-
-                // prevent partially processed buffer from reaching free buffers queue
-                sbuffer.reset();
-            }
-
-            // finally fulfilled the rendering buffer
-            if (0 == m_rendering_buffer_frames_rest)
-            {
-                // TODO: the last parameter is here https://msdn.microsoft.com/en-us/library/windows/desktop/dd371458(v=vs.85).aspx
-                hr = m_pRenderClient->ReleaseBuffer(m_rendering_buffer_frames_avaliable, 0);
-                assert(S_OK == hr);
-                if (FAILED(hr))
-                    return hr;
-
-                std::cout << "Released the buffer" << std::endl;
-
-                m_rendering_buffer = NULL;
-
-                if (!m_rendering_started)
+                // take the rendering buffer
+                if (!rendering_buffer)
                 {
-                    // start playing.
-                    hr = m_pAudioClient->Start();
+                    UINT32 rendering_buffer_frames_padding = 0;
+                    if (rendering_started)
+                    {
+                        // see how much buffer space is available.
+                        hr = m_pAudioClient->GetCurrentPadding(&rendering_buffer_frames_padding);
+                        assert(S_OK == hr);
+                        if (FAILED(hr))
+                            throw std::exception("Failed to get current padding");
+                    }
+
+                    // calc avaliable buffer frames
+                    rendering_buffer_frames_avaliable = m_rendering_buffer_frames_total - rendering_buffer_frames_padding;
+
+                    // grab the avaliable buffer
+                    hr = m_pRenderClient->GetBuffer(rendering_buffer_frames_avaliable, &rendering_buffer);
                     assert(S_OK == hr);
                     if (FAILED(hr))
-                        return hr;
+                        throw std::exception("Failed to get rendering buffer.");
 
-                    std::cout << "Started rendering" << std::endl;
+                    std::cout << "Got buffer of " << rendering_buffer_frames_avaliable << " frames" << std::endl;
 
-                    m_rendering_started = true;
+                    // at this point rest frames are of the same value as avaliable
+                    rendering_buffer_frames_rest = rendering_buffer_frames_avaliable;
                 }
 
-                REFERENCE_TIME rtStreamLatency = 0;
-                hr = m_pAudioClient->GetStreamLatency(&rtStreamLatency);
-                assert(S_OK == hr);
-                if (FAILED(hr))
-                    return hr;
+                // offset in the rendering buffer
+                const uint32_t offset_frames = rendering_buffer_frames_avaliable - rendering_buffer_frames_rest;
 
-                std::cout << "Stream latency " << rtStreamLatency << "." << std::endl;
+                // bytes to copy from the source buffer
+                const uint32_t frames_in_buffer = bytes_to_frames(sbuffer->asize);
+                const uint32_t frames_to_render = rendering_buffer_frames_rest < frames_in_buffer ? rendering_buffer_frames_rest : frames_in_buffer;
 
-                // sleep for half the buffer duration.
-                Sleep((DWORD)(m_rendering_buffer_duration / REFTIMES_PER_MILLISEC / 4));
-            }
+                // copy bytes_to_render bytes from source buffer to rendering buffer
+                const size_t offset_bytes = frames_to_bytes(offset_frames);
+                const size_t bytes_to_render = frames_to_bytes(frames_to_render);
 
-            if (sbuffer)
-            {
-                std::weak_ptr<PCMDataBuffer> wbuffer(sbuffer);
-                if (!InternalPutBuffer(wbuffer))
-                    return E_FAIL;
+                memcpy(rendering_buffer + offset_bytes, sbuffer->p, bytes_to_render);
+
+                // reduce the rest of rendering buffer with copied data 
+                rendering_buffer_frames_rest -= frames_to_render;
+
+                // once hte buffer had processed partially - keep it for the next session
+                if (frames_to_render < frames_in_buffer)
+                {
+                    // how many bytes to keep in the source buffer
+                    sbuffer->asize -= frames_to_bytes(frames_to_render);
+
+                    // move kept bytes to the source buffer beginning
+                    memmove(sbuffer->p, ((char*)sbuffer->p + frames_to_bytes(frames_to_render)), sbuffer->asize);
+
+                    // keep the buffer separately
+                    rendering_partially_processed_buffer = sbuffer;
+
+                    // prevent partially processed buffer from reaching free buffers queue
+                    sbuffer.reset();
+                }
+
+                // finally fulfilled the rendering buffer
+                if (0 == rendering_buffer_frames_rest || sbuffer->last)
+                {
+                    // TODO: the last parameter is here https://msdn.microsoft.com/en-us/library/windows/desktop/dd371458(v=vs.85).aspx
+                    hr = m_pRenderClient->ReleaseBuffer(rendering_buffer_frames_avaliable - rendering_buffer_frames_rest, 0);
+
+                    if(out_file.is_open())
+                        out_file.write((char*)rendering_buffer, (rendering_buffer_frames_avaliable - rendering_buffer_frames_rest) * m_format_render->bytesPerFrame);
+
+                    assert(S_OK == hr);
+                    if (FAILED(hr))
+                        throw std::exception("Failed to release rendering buffer.");
+
+                    std::cout << "Released the buffer" << std::endl;
+
+                    rendering_buffer = NULL;
+
+                    if (!rendering_started)
+                    {
+                        // start playing.
+                        hr = m_pAudioClient->Start();
+                        assert(S_OK == hr);
+                        if (FAILED(hr))
+                            throw std::exception("Failure while calling to IAudioClient::Start.");
+
+                        std::cout << "Started rendering" << std::endl;
+
+                        rendering_started = true;
+                    }
+
+                    REFERENCE_TIME rtStreamLatency = 0;
+                    hr = m_pAudioClient->GetStreamLatency(&rtStreamLatency);
+                    assert(S_OK == hr);
+                    if (FAILED(hr))
+                        throw std::exception("Failed to get stream latency.");
+
+                    std::cout << "Stream latency " << rtStreamLatency << "." << std::endl;
+
+                    // sleep for half the buffer duration.
+                    Sleep((DWORD)(m_rendering_buffer_duration / REFTIMES_PER_MILLISEC / 4));
+                }
+
+                if (sbuffer)
+                {
+                    std::weak_ptr<PCMDataBuffer> wbuffer(sbuffer);
+                    if (!InternalPutBuffer(wbuffer))
+                        throw std::exception("Failed to put data buffer back.");
+
+                    if (sbuffer->last)
+                        break;
+                }
             }
         }
+        catch (std::exception exc)
+        {
+            std::cout << "Rendering failed: " << exc.what() << std::endl;
+            hr = E_FAIL;
+        }
+        
+        if (out_file.is_open())
+            out_file.close();
 
-        return S_OK;
+        return hr;
     }
 
     bool

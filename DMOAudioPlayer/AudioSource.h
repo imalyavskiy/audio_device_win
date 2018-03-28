@@ -96,8 +96,6 @@ namespace WavAudioSource
     protected:
         std::ifstream  m_source_data;
         std::streamoff m_file_size;
-        std::streampos m_data_chunk_bytes_total = 0;
-        std::streampos m_data_chunk_bytes_rest  = 0;
 
         std::unique_ptr<WaveRiff> m_wave_riff;
     };

@@ -2,10 +2,11 @@
 #include "common.h"
 #include "PcmStreamRendererInterface.h"
 #include "PcmStreamRenderer.h"
+
 namespace PcmSrtreamRenderer {
-    bool create(std::shared_ptr<Interface>& instance)
+    bool create(const std::string& dump_file, std::shared_ptr<Interface>& instance)
     {
-        std::shared_ptr<Implementation> p = std::make_shared<Implementation>();
+        std::shared_ptr<Implementation> p = std::make_shared<Implementation>(dump_file);
         if (!p->Init())
             return false;
 

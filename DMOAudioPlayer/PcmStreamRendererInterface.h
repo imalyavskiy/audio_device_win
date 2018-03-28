@@ -27,6 +27,6 @@ namespace PcmSrtreamRenderer{
 
     };
 
-    bool create(std::shared_ptr<Interface>& instance);
+    bool create(const std::string& dump_file, std::shared_ptr<Interface>& instance);
 }
 #endif // __PCM_STREAM_RENDERER_INTERFACE_H__

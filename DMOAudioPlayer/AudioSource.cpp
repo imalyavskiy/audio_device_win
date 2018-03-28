@@ -62,9 +62,6 @@ namespace WavAudioSource
             }
         }
 
-        m_data_chunk_bytes_total = m_wave_riff->data_chunk->pos_end - m_wave_riff->data_chunk->pos_begin;
-        m_data_chunk_bytes_rest = m_data_chunk_bytes_total;
-
         m_source_data.clear();
         m_source_data.seekg(0, std::ios_base::beg);
 
@@ -217,31 +214,52 @@ namespace WavAudioSource
     bool
     Implementation::ReadData(std::shared_ptr<PCMDataBuffer> buffer)
     {
+        // clean buffer descriptor
+        buffer->reset();
+
+        //
         assert(m_source_data.is_open());
         std::ios_base::iostate rdstate = std::ios_base::goodbit;
 
+        //
         assert(0 == (buffer->tsize % m_wave_riff->format_chunk->nBlockAlign));
         if (buffer->tsize % m_wave_riff->format_chunk->nBlockAlign != 0)
             return false;
 
+        //
         std::streampos curr_pos = m_source_data.tellg();
         if ((curr_pos < m_wave_riff->data_chunk->pos_begin) || (m_wave_riff->data_chunk->pos_end < curr_pos))
-            m_source_data.seekg(m_wave_riff->data_chunk->pos_begin, std::ios_base::beg);
-
-        m_source_data.read(reinterpret_cast<char*>(buffer->p), std::streamsize(buffer->tsize));
-
-        rdstate = m_source_data.rdstate();
-        
-        buffer->asize = m_source_data.gcount();
-
-        m_data_chunk_bytes_rest -= std::streampos(buffer->asize);
-
-        if ((std::ios_base::failbit|std::ios_base::eofbit) & rdstate > 0)
         {
-            buffer->last = true;
-            return SUCCEEDED(buffer->asize > 0 ? S_FALSE : E_FAIL);
+            m_source_data.seekg(m_wave_riff->data_chunk->pos_begin, std::ios_base::beg);
+            curr_pos = m_source_data.tellg();
+        }
+        
+        //
+        const std::streamsize bytes_left = m_wave_riff->data_chunk->pos_end - curr_pos;
+        const std::streamsize bytes_to_read = bytes_left < buffer->tsize ? bytes_left : buffer->tsize;
+
+        // fill buffer
+        if(bytes_to_read > 0)
+        {   // read data
+            m_source_data.read(reinterpret_cast<char*>(buffer->p), bytes_to_read);
+
+            // check state
+            rdstate = m_source_data.rdstate();
+            if (((std::ios_base::failbit | std::ios_base::eofbit) & rdstate) > 0)
+                return SUCCEEDED(E_FAIL);
+
+            // update buffer descriptor
+            buffer->asize = m_source_data.gcount();
+            assert(buffer->asize == bytes_to_read);
+            
+            // set the buffer is last
+            //  - buffer is the last if data left is less then buffer size
+            //  - buffer is the last if data just came to an end
+            buffer->last = bytes_to_read < buffer->tsize || 0 == (bytes_left - bytes_to_read);
+
+            return SUCCEEDED(S_OK);
         }
 
-        return SUCCEEDED(S_OK);
+        return SUCCEEDED(E_FAIL);
     }
 }

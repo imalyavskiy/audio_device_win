@@ -143,7 +143,7 @@ HRESULT PlayAudioStreamClass::Do(WavAudioSource::Interface *pMySource)
         if (FAILED(hr = pMySource->ReadData(numFramesAvailable, pData, &flags)))
             return hr;
 #else
-        *pBuffer = PCMDataBuffer{ pData, numFramesAvailable * format.bytesPerFrame, 0, false };
+        pBuffer.reset(new PCMDataBuffer{ pData, numFramesAvailable * format.bytesPerFrame, 0, false });
 
         //
         if (!pMySource->ReadData(pBuffer))
@@ -298,7 +298,7 @@ HRESULT PlayAudioStream(WavAudioSource::Interface *pMySource)
         if (FAILED(hr = pMySource->ReadData(numFramesAvailable, pData, &flags)))
             return hr;
 #else
-        *pBuffer = PCMDataBuffer{ pData, numFramesAvailable * format.bytesPerFrame, 0, false };
+        pBuffer.reset(new PCMDataBuffer{ pData, numFramesAvailable * format.bytesPerFrame, 0, false });
 
         //
         if (FAILED(hr = pMySource->ReadData(pBuffer)))
