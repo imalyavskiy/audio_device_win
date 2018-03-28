@@ -50,6 +50,7 @@ namespace PcmSrtreamRenderer
     protected:
         static DWORD WINAPI DoRenderThread(LPVOID param);
 
+        HRESULT FillBuffer(BYTE * const buffer, const UINT32 buffer_frames, UINT32& buffer_actual_frames, PCMDataBuffer::wptr& rendering_partially_processed_buffer);
         HRESULT DoRender();
 
         bool    InternalGetBuffer(std::weak_ptr<PCMDataBuffer>& buffer);
