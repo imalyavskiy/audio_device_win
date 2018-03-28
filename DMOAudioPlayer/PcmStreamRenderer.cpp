@@ -300,7 +300,7 @@ namespace PcmSrtreamRenderer
         HRESULT hr = S_OK;
         std::ofstream out_file;
         if(0 < m_dump_file.length())
-            out_file.open("C:\\Users\\developer\\etc\\DMOAudioPlayer\\temp\\48000_32bps_2ch.raw", std::ios_base::out | std::ios_base::binary);
+            out_file.open(m_dump_file, std::ios_base::out | std::ios_base::binary);
 
         bool                rendering_started                   = false;
 
