@@ -64,6 +64,7 @@ namespace PcmSrtreamRenderer
                 return SUCCEEDED(hr);
 
             WAVEFORMATEXTENSIBLE* pext = reinterpret_cast<WAVEFORMATEXTENSIBLE*>(mix_format);
+            pext->SubFormat = KSDATAFORMAT_SUBTYPE_PCM;
 
             p_mix_format = ComUniquePtr<WAVEFORMATEX>{ mix_format, &CoTaskMemFree};
 
