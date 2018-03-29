@@ -45,25 +45,25 @@ bool Converter::initialize()
 void Converter::update_proxy_buffers(const PCMDataBuffer& buffer_in, const PCMDataBuffer& buffer_out)
 {
     // allocate proxy input buffer
-    if ((!m_float_buffer_in) || (m_last_buffer_in_tsize != buffer_in.tsize))
+    if ((!m_float_buffer_in) || (m_last_buffer_in_tsize != buffer_in.total_size))
     {
         const size_t in_buffer_capacity_in_samples 
-            = buffer_in.tsize / (m_format_in.bytesPerFrame / m_format_in.channels);
+            = buffer_in.total_size / (m_format_in.bytesPerFrame / m_format_in.channels);
 
         m_float_buffer_in.reset(new float[in_buffer_capacity_in_samples]);
 
-        m_last_buffer_in_tsize = buffer_in.tsize;
+        m_last_buffer_in_tsize = buffer_in.total_size;
     }
 
     // allocate proxy output buffer
-    if ((!m_float_buffer_out) || (m_last_buffer_out_tsize != buffer_out.tsize))
+    if ((!m_float_buffer_out) || (m_last_buffer_out_tsize != buffer_out.total_size))
     {
         const size_t out_buffer_capacity_in_samples 
-            = buffer_in.tsize / (m_format_out.bytesPerFrame / m_format_out.channels);
+            = buffer_in.total_size / (m_format_out.bytesPerFrame / m_format_out.channels);
 
         m_float_buffer_out.reset(new float[out_buffer_capacity_in_samples]);
 
-        m_last_buffer_out_tsize = buffer_out.tsize;
+        m_last_buffer_out_tsize = buffer_out.total_size;
     }
 }
 
@@ -76,11 +76,11 @@ bool Converter::convert(PCMDataBuffer& buffer_in, PCMDataBuffer& buffer_out, boo
         return false;
 
     // buffers must be of size capable to store integral frame count
-    assert(0 == buffer_in.asize % m_format_in.bytesPerFrame);
-    assert(0 == buffer_in.tsize % m_format_in.bytesPerFrame);
+    assert(0 == buffer_in.actual_size % m_format_in.bytesPerFrame);
+    assert(0 == buffer_in.total_size % m_format_in.bytesPerFrame);
 
     //
-    const size_t actual_input_samples = buffer_in.asize / (m_format_in.bytesPerFrame / m_format_in.channels);
+    const size_t actual_input_samples = buffer_in.actual_size / (m_format_in.bytesPerFrame / m_format_in.channels);
 
     //
     update_proxy_buffers(buffer_in, buffer_out);
@@ -98,8 +98,8 @@ bool Converter::convert(PCMDataBuffer& buffer_in, PCMDataBuffer& buffer_out, boo
     {
         m_float_buffer_in.get(),                        // data_in
         m_float_buffer_out.get(),                       // data_out
-        buffer_in.asize / m_format_in.bytesPerFrame,    // input_frames     - actual number
-        buffer_out.tsize / m_format_out.bytesPerFrame,  // output_frames    - maximum buffer capacity
+        buffer_in.actual_size / m_format_in.bytesPerFrame,    // input_frames     - actual number
+        buffer_out.total_size / m_format_out.bytesPerFrame,  // output_frames    - maximum buffer capacity
         0L,                                             // input_frames_used
         0L,                                             // output_frames_gen
         (int)no_more_data,                              // end_of_input
@@ -118,13 +118,13 @@ bool Converter::convert(PCMDataBuffer& buffer_in, PCMDataBuffer& buffer_out, boo
         src_float_to_int_array(m_float_buffer_out.get(), (int*)buffer_out.p, src_data.output_frames_gen * m_format_out.channels);
     
     // 
-    buffer_out.asize = src_data.output_frames_gen * m_format_out.bytesPerFrame;
+    buffer_out.actual_size = src_data.output_frames_gen * m_format_out.bytesPerFrame;
 
     // calc data rest
     const uint32_t bytes_consumed = src_data.input_frames_used * m_format_in.bytesPerFrame;
-    buffer_in.asize -= bytes_consumed;
-    if(buffer_in.asize != 0) // move unprocessed data if any to the beginning of the input buffer
-        memmove(buffer_in.p, (void*)((char*)buffer_in.p + bytes_consumed), buffer_in.asize);
+    buffer_in.actual_size -= bytes_consumed;
+    if(buffer_in.actual_size != 0) // move unprocessed data if any to the beginning of the input buffer
+        memmove(buffer_in.p, (void*)((char*)buffer_in.p + bytes_consumed), buffer_in.actual_size);
 
     return true;
 }
