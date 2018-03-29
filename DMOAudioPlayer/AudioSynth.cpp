@@ -1,5 +1,4 @@
 #include "stdafx.h"
-#include "critical_section.h"
 #include "AudioSynth.h"
 
 const DWORD BITS_PER_BYTE = 8;
@@ -7,14 +6,14 @@ const DWORD BITS_PER_BYTE = 8;
 #error
 #endif
 
-inline bool CritCheckIn(CriticalSection * pcCrit)
-{   
-    return (GetCurrentThreadId() == pcCrit->CurrentOwnerId());
-}
+// inline bool CritCheckIn(CriticalSection * pcCrit)
+// {   
+//     return (GetCurrentThreadId() == pcCrit->CurrentOwnerId());
+// }
 
 //////////////////////////////////////////////////////////////////////////
 
-RawAudioSource::RawAudioSource( CriticalSection* pStateLock, int Frequency, Waveforms Waveform, int iBitsPerSample, int iChannels, int iSamplesPerSec, int iAmplitude )
+RawAudioSource::RawAudioSource(std::mutex* pmtx, int Frequency, Waveforms Waveform, int iBitsPerSample, int iChannels, int iSamplesPerSec, int iAmplitude )
     : m_BitsPerSample(iBitsPerSample)
     , m_SamplesPerSecond(iSamplesPerSec)
     , m_Channels(iChannels)
@@ -77,10 +76,10 @@ RawAudioSource::AllocWaveCache(/*const WAVEFORMATEX& wfex*/)
 
 //////////////////////////////////////////////////////////////////////////
 
-AudioSynth::AudioSynth(CriticalSection* pStateLock, int Frequency, Waveforms Waveform, int iBitsPerSample, int iChannels, int iSamplesPerSec, int iAmplitude )
+AudioSynth::AudioSynth(std::mutex* pmtx, int Frequency, Waveforms Waveform, int iBitsPerSample, int iChannels, int iSamplesPerSec, int iAmplitude )
     : m_bWaveCache(NULL)
     , m_wWaveCache(NULL)
-    , m_pStateLock(pStateLock)
+    , m_pmtx(pmtx)
     , m_iFrequency(Frequency)
     , m_iWaveform(Waveform)
     , m_iAmplitude(iAmplitude)
@@ -112,7 +111,7 @@ AudioSynth::AllocWaveCache(/*const WAVEFORMATEX& wfex*/)
     // m_iFrequency, m_bWaveCache and m_wWaveCache.  The
     // function should also hold the state lock because
     // it calls CalcCache().
-    assert(CritCheckIn(m_pStateLock));
+//    assert(CritCheckIn(m_pStateLock));
 
     m_iWaveCacheCycles = m_iFrequency;
     m_iWaveCacheSize = (int)m_dwSamplesPerSec/*wfex.nSamplesPerSec*/;
@@ -158,7 +157,7 @@ AudioSynth::FillPCMAudioBuffer(/*const WAVEFORMATEX& wfex, */BYTE pBuf[], int iB
     // m_iWaveformLast, m_iAmplitude, m_iAmplitudeLast, m_iWaveCacheIndex
     // m_iWaveCacheSize, m_bWaveCache and m_wWaveCache.  The caller should
     // also hold the state lock because this function calls CalcCache().
-    assert(CritCheckIn(m_pStateLock));
+//    assert(CritCheckIn(m_pStateLock));
 
     // Only realloc the cache if the format has changed !
     if (m_iFrequency != m_iFrequencyLast)
@@ -441,7 +440,7 @@ HRESULT AudioSynth::get_Frequency(int *pFrequency)
 
 HRESULT AudioSynth::put_Frequency(int Frequency)
 {
-    AutoLock l(m_pStateLock);
+    std::unique_lock<std::mutex> l(*m_pmtx);
 
     m_iFrequency = Frequency;
 
@@ -459,7 +458,7 @@ HRESULT AudioSynth::get_Waveform(Waveforms &waveForm) const
 
 HRESULT AudioSynth::put_Waveform(Waveforms Waveform)
 {
-    AutoLock l(m_pStateLock);
+    std::unique_lock<std::mutex> l(*m_pmtx);
 
     m_iWaveform = Waveform;
 
@@ -480,7 +479,7 @@ HRESULT AudioSynth::get_Channels(int *pChannels)
 
 HRESULT AudioSynth::put_Channels(int Channels)
 {
-    AutoLock l(m_pStateLock);
+    std::unique_lock<std::mutex> l(*m_pmtx);
 
     m_wChannels = (WORD)Channels;
     return NOERROR;
@@ -499,7 +498,7 @@ HRESULT AudioSynth::get_BitsPerSample(int *pBitsPerSample)
 
 HRESULT AudioSynth::put_BitsPerSample(int BitsPerSample)
 {
-    AutoLock l(m_pStateLock);
+    std::unique_lock<std::mutex> l(*m_pmtx);
 
     m_wBitsPerSample = (WORD)BitsPerSample;
     return NOERROR;
@@ -518,7 +517,7 @@ HRESULT AudioSynth::get_SamplesPerSec(int *pSamplesPerSec)
 
 HRESULT AudioSynth::put_SamplesPerSec(int SamplesPerSec)
 {
-    AutoLock l(m_pStateLock);
+    std::unique_lock<std::mutex> l(*m_pmtx);
 
     m_dwSamplesPerSec = SamplesPerSec;
     return NOERROR;
@@ -526,7 +525,7 @@ HRESULT AudioSynth::put_SamplesPerSec(int SamplesPerSec)
 
 HRESULT AudioSynth::put_SynthFormat(int Channels, int BitsPerSample, int SamplesPerSec)
 {
-    AutoLock l(m_pStateLock);
+    std::unique_lock<std::mutex> l(*m_pmtx);
 
     m_wChannels = (WORD)Channels;
     m_wBitsPerSample = (WORD)BitsPerSample;
@@ -550,7 +549,7 @@ HRESULT AudioSynth::get_Amplitude(int *pAmplitude)
 
 HRESULT AudioSynth::put_Amplitude(int Amplitude)
 {
-    AutoLock l(m_pStateLock);
+    std::unique_lock<std::mutex> l(*m_pmtx);
 
     if (Amplitude > MaxAmplitude || Amplitude < MinAmplitude)
         return E_INVALIDARG;
@@ -578,7 +577,7 @@ HRESULT AudioSynth::get_SweepRange(int *pSweepStart, int *pSweepEnd)
 
 HRESULT AudioSynth::put_SweepRange(int SweepStart, int SweepEnd)
 {
-    AutoLock l(m_pStateLock);
+    std::unique_lock<std::mutex> l(*m_pmtx);
 
     m_iSweepStart = SweepStart;
     m_iSweepEnd = SweepEnd;
@@ -613,7 +612,7 @@ HRESULT AudioSynth::get_OutputFormat(SYNTH_OUTPUT_FORMAT *pOutputFormat)
 
 HRESULT AudioSynth::put_OutputFormat(SYNTH_OUTPUT_FORMAT ofOutputFormat)
 {
-    AutoLock l(m_pStateLock);
+    std::unique_lock<std::mutex> l(*m_pmtx);
 
     switch (ofOutputFormat)
     {

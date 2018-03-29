@@ -24,40 +24,65 @@ namespace PcmSrtreamRenderer
     class Implementation
         : public Interface
     {
-        typedef std::queue<PCMDataBuffer::wptr> BUFFER_QUEUE;
-        typedef std::list<PCMDataBuffer::sptr>  BUFFER_LIST;
 
+        //
         inline std::streamsize frames_to_bytes(const std::streamsize& frames) const { return m_format_render->bytesPerFrame * frames; };
+        
+        //
         inline std::streamsize bytes_to_frames(const std::streamsize& bytes) const { return bytes / m_format_render->bytesPerFrame; };
 
     public:
+        //
         Implementation(const std::string& dump_file);
+
+        //
         ~Implementation();
 
+        //
         bool    Init();
 
+        //
         bool    SetFormat(const PCMFormat& format, const size_t buffer_frames, const size_t buffers_total) override;
+
+        //
         bool    GetFormat(PCMFormat& format, size_t& buffer_frames, size_t& buffers_total) const override;
 
-        bool    Start() override;
+        //
         bool    Stop() override;
 
+        //
+        bool    WaitForCompletion() override;
+
+        //
         state   GetState() const override;
 
-        bool    PutBuffer(std::weak_ptr<PCMDataBuffer>& buffer) override;
-        bool    GetBuffer(std::weak_ptr<PCMDataBuffer>& buffer) override;
+        //
+        bool    PutBuffer(PCMDataBuffer::wptr& buffer) override;
+
+        //
+        bool    GetBuffer(PCMDataBuffer::wptr& buffer) override;
 
     protected:
-        static DWORD WINAPI DoRenderThread(LPVOID param);
+        //
+        bool    Start() override;
 
-        HRESULT FillBuffer(BYTE * const buffer, const UINT32 buffer_frames, UINT32& buffer_actual_frames, PCMDataBuffer::wptr& rendering_partially_processed_buffer);
+        // S_OK for the fulfilled buffer and S_FALSE for partially filled buffer
+        HRESULT FillBuffer(uint8_t * const buffer, const std::streamsize buffer_frames, std::streamsize& buffer_actual_frames, PCMDataBuffer::wptr& rendering_partially_processed_buffer);
+
+        //
         HRESULT DoRender();
 
+        //
         bool    InternalGetBuffer(std::weak_ptr<PCMDataBuffer>& buffer);
+
+        //
         bool    InternalPutBuffer(std::weak_ptr<PCMDataBuffer>& buffer);
 
     protected:
         ScopedCOMInitializer        m_com_guard;
+
+        std::mutex                  m_thread_running_mtx;
+        std::condition_variable     m_thread_running_cv;
 
         std::atomic<state>          m_state = STATE_NONE;
 
@@ -68,7 +93,6 @@ namespace PcmSrtreamRenderer
         IMMDevicePtr                m_pDevice;
         IAudioClientPtr             m_pAudioClient;
         IAudioRenderClientPtr       m_pRenderClient;
-        ISimpleAudioVolumePtr       m_pVolumeControl;
 
         std::unique_ptr<PCMFormat>  m_format_in;
         std::unique_ptr<size_t>     m_buffer_frames;
@@ -77,29 +101,29 @@ namespace PcmSrtreamRenderer
 
         ConverterInterface::ptr     m_converter; // sample rate converter
 
-        CriticalSection             m_cs;
+        std::thread                 m_render_thread;
+        
+        common::ThreadInterraptor   m_thread_interraption;
 
-        HANDLE                      m_hRenderThread = NULL;
-        DWORD                       m_dwThreadId = 0;
-        HANDLE                      m_hRenderThreadExitEvent = NULL;
-        HANDLE                      m_hNewDataBufferSemaphore = NULL;
-        HANDLE                      m_hFreeDataBuffersSemaphore = NULL;
+        common::ThreadCompletor     m_thread_completor;
 
         // queue of the buffers with rendering data
         //  populated by PutBuffer
         //  grabbed by GetBufferInternal
-        BUFFER_QUEUE                m_inputDataQueue;
+        //BUFFER_QUEUE                m_inputDataQueue;
+        common::BufferQueue<PCMDataBuffer::wptr> m_inputDataQueue;
 
         // queue of the buffers that are rendered
         //  populated by PutBufferInternal
         //  grabbed by GetBuffer
-        BUFFER_QUEUE                m_freeBufffersQueue;
+        //BUFFER_QUEUE                m_freeBufffersQueue;
+        common::BufferQueue<PCMDataBuffer::wptr> m_freeBufffersQueue;
 
         // overall bufer list
         //  populated by SetFormat
-        BUFFER_LIST                 m_bufferStorage;
+        std::list<PCMDataBuffer::sptr>   m_bufferStorage;
 
-        const std::string           m_dump_file;
+        const std::string                m_dump_file;
     };
 }
 

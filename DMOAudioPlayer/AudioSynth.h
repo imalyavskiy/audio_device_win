@@ -64,7 +64,7 @@ protected:
     std::streamoff m_file_size;
 public:
     RawAudioSource(
-        CriticalSection* pStateLock,
+        std::mutex* pmtx,
         int Frequency = DefaultFrequency,
         Waveforms Waveform = Waveforms::WAVE_SINE,
         int iBitsPerSample = 8,
@@ -89,7 +89,7 @@ class AudioSynth
 public:
 
     AudioSynth(
-        CriticalSection* pStateLock,
+        std::mutex* pmtx,
         int Frequency       = DefaultFrequency,
         Waveforms Waveform  = Waveforms::WAVE_SINE,
         int iBitsPerSample  = 8,
@@ -133,7 +133,7 @@ public:
     HRESULT put_OutputFormat(SYNTH_OUTPUT_FORMAT ofOutputFormat);
 
 private:
-    CriticalSection* m_pStateLock;
+    std::mutex* m_pmtx;
 
     WORD  m_wChannels;          // The output format's current number of channels.
     WORD  m_wFormatTag;         // The output format.  This can be PCM audio or MS ADPCM audio.

@@ -34,9 +34,9 @@ protected:
     CComPtr<IAudioClient>               pAudioClient;
     CComPtr<IAudioRenderClient>         pRenderClient;
 
-    ComUniquePtr<WAVEFORMATEX>          p_mix_format;
-    ComUniquePtr<WAVEFORMATEXTENSIBLE>  p_desired_format;
-    ComUniquePtr<WAVEFORMATEX>          p_closest_format;
+    common::ComUniquePtr<WAVEFORMATEX>          p_mix_format;
+    common::ComUniquePtr<WAVEFORMATEXTENSIBLE>  p_desired_format;
+    common::ComUniquePtr<WAVEFORMATEX>          p_closest_format;
 
     REFERENCE_TIME                      rtRequestedDuration = REFTIMES_PER_SEC;
     REFERENCE_TIME                      rtActualDuration = 0;

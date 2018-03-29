@@ -8,7 +8,7 @@ namespace WavAudioSource
 {
     const uint32_t riff_4cc = MAKEFOURCC('R', 'I', 'F', 'F');
     const uint32_t wave_4cc = MAKEFOURCC('W', 'A', 'V', 'E');
-    const uint32_t fmt_4cc = MAKEFOURCC('f', 'm', 't', ' ');
+    const uint32_t fmt_4cc  = MAKEFOURCC('f', 'm', 't', ' ');
     const uint32_t data_4cc = MAKEFOURCC('d', 'a', 't', 'a');
 
     Implementation::Implementation()
@@ -222,8 +222,8 @@ namespace WavAudioSource
         std::ios_base::iostate rdstate = std::ios_base::goodbit;
 
         //
-        assert(0 == (buffer->tsize % m_wave_riff->format_chunk->nBlockAlign));
-        if (buffer->tsize % m_wave_riff->format_chunk->nBlockAlign != 0)
+        assert(0 == (buffer->total_size % m_wave_riff->format_chunk->nBlockAlign));
+        if (buffer->total_size % m_wave_riff->format_chunk->nBlockAlign != 0)
             return false;
 
         //
@@ -236,7 +236,7 @@ namespace WavAudioSource
         
         //
         const std::streamsize bytes_left = m_wave_riff->data_chunk->pos_end - curr_pos;
-        const std::streamsize bytes_to_read = bytes_left < buffer->tsize ? bytes_left : buffer->tsize;
+        const std::streamsize bytes_to_read = bytes_left < buffer->total_size ? bytes_left : buffer->total_size;
 
         // fill buffer
         if(bytes_to_read > 0)
@@ -249,13 +249,13 @@ namespace WavAudioSource
                 return SUCCEEDED(E_FAIL);
 
             // update buffer descriptor
-            buffer->asize = m_source_data.gcount();
-            assert(buffer->asize == bytes_to_read);
+            buffer->actual_size = m_source_data.gcount();
+            assert(buffer->actual_size == bytes_to_read);
             
             // set the buffer is last
             //  - buffer is the last if data left is less then buffer size
             //  - buffer is the last if data just came to an end
-            buffer->last = bytes_to_read < buffer->tsize || 0 == (bytes_left - bytes_to_read);
+            buffer->end_of_stream = bytes_to_read < buffer->total_size || 0 == (bytes_left - bytes_to_read);
 
             return SUCCEEDED(S_OK);
         }

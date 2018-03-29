@@ -20,10 +20,11 @@ namespace PcmSrtreamRenderer{
 
         virtual bool    Start() = 0;
         virtual bool    Stop() = 0;
+        virtual bool    WaitForCompletion() = 0;
 
         virtual state   GetState() const = 0;
-        virtual bool    PutBuffer(std::weak_ptr<PCMDataBuffer>& buffer) = 0; // frames == channels * bits_per_sample / 8
-        virtual bool    GetBuffer(std::weak_ptr<PCMDataBuffer>& buffer) = 0;
+        virtual bool    PutBuffer(PCMDataBuffer::wptr& buffer) = 0; // frames == channels * bits_per_sample / 8
+        virtual bool    GetBuffer(PCMDataBuffer::wptr& buffer) = 0;
 
     };
 

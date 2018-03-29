@@ -21,31 +21,10 @@
     <ClInclude Include="targetver.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="AudioDeviceGeneric.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="AudioDeviceWindowsCore.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="critical_section.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="com_guard.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="AudioDeviceModule.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="AudioSynth.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="AudioDeviceBuffer.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="AudioDeviceBuffer.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="AudioDeviceBufferInterface.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="PcmStreamRenderer.h">
@@ -63,10 +42,10 @@
     <ClInclude Include="common.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="semaphore.h">
+    <ClInclude Include="com_guard.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="PlayAudioStream.h">
+    <ClInclude Include="DataStream.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -77,22 +56,7 @@
     <ClCompile Include="DMOAudioPlayer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="AudioDeviceGeneric.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="AudioDeviceWindowsCore.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="critical_section.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="com_guard.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="AudioSynth.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="AudioDeviceBuffer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="PcmStreamRenderer.cpp">
@@ -107,7 +71,10 @@
     <ClCompile Include="AudioSourceInterface.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="PlayAudioStream.cpp">
+    <ClCompile Include="com_guard.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="DataStream.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

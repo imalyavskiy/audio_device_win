@@ -159,37 +159,26 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="AudioDeviceBuffer.h" />
-    <ClInclude Include="AudioDeviceBufferInterface.h" />
-    <ClInclude Include="AudioDeviceModule.h" />
-    <ClInclude Include="AudioDeviceWindowsCore.h" />
-    <ClInclude Include="AudioDeviceGeneric.h" />
     <ClInclude Include="AudioSource.h" />
     <ClInclude Include="AudioSourceInterface.h" />
     <ClInclude Include="AudioSynth.h" />
     <ClInclude Include="common.h" />
     <ClInclude Include="com_guard.h" />
-    <ClInclude Include="critical_section.h" />
+    <ClInclude Include="DataStream.h" />
     <ClInclude Include="PcmStreamRenderer.h" />
     <ClInclude Include="PcmStreamRendererInterface.h" />
-    <ClInclude Include="PlayAudioStream.h" />
-    <ClInclude Include="semaphore.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="AudioDeviceBuffer.cpp" />
-    <ClCompile Include="AudioDeviceWindowsCore.cpp" />
-    <ClCompile Include="AudioDeviceGeneric.cpp" />
     <ClCompile Include="AudioSource.cpp" />
     <ClCompile Include="AudioSourceInterface.cpp" />
+    <ClCompile Include="com_guard.cpp" />
+    <ClCompile Include="DataStream.cpp" />
     <ClCompile Include="PcmStreamRendererInterface.cpp" />
     <ClCompile Include="AudioSynth.cpp" />
-    <ClCompile Include="com_guard.cpp" />
-    <ClCompile Include="critical_section.cpp" />
     <ClCompile Include="DMOAudioPlayer.cpp" />
     <ClCompile Include="PcmStreamRenderer.cpp" />
-    <ClCompile Include="PlayAudioStream.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>

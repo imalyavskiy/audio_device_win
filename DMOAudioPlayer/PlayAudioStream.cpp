@@ -173,9 +173,9 @@ HRESULT PlayAudioStream(WavAudioSource::Interface *pMySource)
     CComPtr<IAudioClient>         pAudioClient;
     CComPtr<IAudioRenderClient>   pRenderClient;
 
-    ComUniquePtr<WAVEFORMATEX>          p_mix_format(nullptr, nullptr);
-    ComUniquePtr<WAVEFORMATEXTENSIBLE>  p_desired_format(nullptr, nullptr);
-    ComUniquePtr<WAVEFORMATEX>          p_closest_format(nullptr, nullptr);
+    common::ComUniquePtr<WAVEFORMATEX>          p_mix_format(nullptr, nullptr);
+    common::ComUniquePtr<WAVEFORMATEXTENSIBLE>  p_desired_format(nullptr, nullptr);
+    common::ComUniquePtr<WAVEFORMATEX>          p_closest_format(nullptr, nullptr);
 
     REFERENCE_TIME          rtRequestedDuration = REFTIMES_PER_SEC;
     REFERENCE_TIME          rtActualDuration = 0;
