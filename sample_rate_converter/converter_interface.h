@@ -4,10 +4,18 @@
 
 struct PCMFormat
 {
-    const uint32_t samplesPerSecond;
-    const uint16_t channels;
-    const uint32_t bitsPerSample;
-    const uint32_t bytesPerFrame;
+    bool operator ==(const PCMFormat& other) const
+    {
+        return samplesPerSecond == other.samplesPerSecond &&
+               channels == other.channels &&
+               bitsPerSample == other.bitsPerSample &&
+               bytesPerFrame == other.bytesPerFrame;
+    }
+
+    uint32_t samplesPerSecond;
+    uint16_t channels;
+    uint32_t bitsPerSample;
+    uint32_t bytesPerFrame;
 };
 
 struct PCMDataBuffer
@@ -15,10 +23,18 @@ struct PCMDataBuffer
     typedef std::shared_ptr<PCMDataBuffer> sptr;
     typedef std::weak_ptr<PCMDataBuffer> wptr;
     
+    PCMDataBuffer(int8_t* p, std::streamsize total)
+        : actual_size(0)
+        , end_of_stream(false)
+        , total_size(total)
+    {
+        (*this).p.reset(p);
+    }
+
     inline void reset() { actual_size = 0; end_of_stream = 0; };
 
     // buffer
-    void * const p; // const pointer to modifiable data
+    std::unique_ptr<int8_t[]> p; // pointer to modifiable data
 
     // total
     const std::streamsize total_size;

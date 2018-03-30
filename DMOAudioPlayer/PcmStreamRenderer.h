@@ -89,35 +89,28 @@ namespace PcmSrtreamRenderer
         UINT32                      m_rendering_buffer_frames_total = 0;
         REFERENCE_TIME              m_rendering_buffer_duration = 0;
 
+        std::shared_ptr<const PCMFormat>  m_format_render;
+
         IMMDeviceEnumeratorPtr      m_pEnumerator;
         IMMDevicePtr                m_pDevice;
         IAudioClientPtr             m_pAudioClient;
         IAudioRenderClientPtr       m_pRenderClient;
 
-        std::unique_ptr<PCMFormat>  m_format_in;
-        std::unique_ptr<size_t>     m_buffer_frames;
-        std::unique_ptr<size_t>     m_buffers_total;
-        std::unique_ptr<PCMFormat>  m_format_render;
-
-        ConverterInterface::ptr     m_converter; // sample rate converter
+        SampleRateConverter::Interface::ptr m_converter; // sample rate converter
 
         std::thread                 m_render_thread;
         
+        //
+        common::DataFlowInterface::wptr m_converterInputFlow;
+
+        //
+        common::DataFlowInterface::wptr m_converterOutputFlow;
+
+        //
         common::ThreadInterraptor   m_thread_interraption;
 
+        //
         common::ThreadCompletor     m_thread_completor;
-
-        // queue of the buffers with rendering data
-        //  populated by PutBuffer
-        //  grabbed by GetBufferInternal
-        //BUFFER_QUEUE                m_inputDataQueue;
-        common::BufferQueue<PCMDataBuffer::wptr> m_inputDataQueue;
-
-        // queue of the buffers that are rendered
-        //  populated by PutBufferInternal
-        //  grabbed by GetBuffer
-        //BUFFER_QUEUE                m_freeBufffersQueue;
-        common::BufferQueue<PCMDataBuffer::wptr> m_freeBufffersQueue;
 
         // overall bufer list
         //  populated by SetFormat

@@ -3,6 +3,7 @@
 #include "common.h"
 #include "PcmStreamRendererInterface.h"
 #include "AudioSourceInterface.h"
+#include "SampleRateConverterInterface.h"
 #include "PcmStreamRenderer.h"
 
 const size_t DATA_BUFFERS_MAX = 10;
@@ -31,6 +32,9 @@ namespace PcmSrtreamRenderer
 
             common::ComUniquePtr<WAVEFORMATEX>  p_mix_format(nullptr, &CoTaskMemFree);
             REFERENCE_TIME              rtRequestedDuration = REFTIMES_PER_SEC * 2;
+
+            if(!SampleRateConverter::create(m_converter))
+                throw std::exception("Failed to create converter instance.");
 
             // check state
             if (m_state != STATE_NONE)
@@ -79,6 +83,10 @@ namespace PcmSrtreamRenderer
 
             // keep the rendering format
             m_format_render.reset(new PCMFormat{ p_mix_format->nSamplesPerSec, p_mix_format->nChannels, p_mix_format->wBitsPerSample, p_mix_format->nBlockAlign });
+            
+            //
+            bool res = m_converter->SetOutputFormat(m_format_render);
+            assert(res);
 
             // Get the actual size of the allocated buffer.
             hr = m_pAudioClient->GetBufferSize(&m_rendering_buffer_frames_total);
@@ -112,26 +120,19 @@ namespace PcmSrtreamRenderer
         if (m_state != STATE_INITIAL)
             return false;
 
-        // keep format input format data
-        m_format_in.reset(new PCMFormat(format));
-        m_buffer_frames.reset(new size_t(buffer_frames));
-        m_buffers_total.reset(new size_t(buffers_total));
+        std::shared_ptr<const PCMFormat> f(new PCMFormat(format));
 
-        // update state
+        m_converter->SetInputFormat(f, buffer_frames, buffers_total);
+
+        //
+        if (!m_converter->GetInputDataFlow(m_converterInputFlow))
+            throw std::exception("Failed to obtain input data flow.");
+
+        //
+        if (!m_converter->GetOutputDataFlow(m_converterOutputFlow))
+            throw std::exception("Failed to obtain output data flow.");
+
         m_state = STATE_STOPPED;
-
-        // calculate single buffer size in bytes
-        const size_t buffer_size = m_format_in->bytesPerFrame * buffer_frames;
-
-        // allocate and put buffers to the appropriate location
-        for(size_t cBuffer = 0; cBuffer < buffers_total; ++cBuffer)
-        {
-            PCMDataBuffer::sptr pB(new PCMDataBuffer{ new uint8_t[buffer_size], (const uint32_t)buffer_size, 0 , false });
-            
-            m_bufferStorage.push_back(pB);
-
-            m_freeBufffersQueue.put(pB);
-        }
 
         Start();
 
@@ -141,10 +142,14 @@ namespace PcmSrtreamRenderer
     bool
     Implementation::GetFormat(PCMFormat& format, size_t& buffer_frames, size_t& buffers_total) const
     {
-        if (m_format_in)
+        if (!m_converter)
             return false;
+        
+        std::shared_ptr<const PCMFormat> f;
 
-        memcpy(&format, m_format_in.get(), sizeof(PCMFormat));
+        m_converter->GetInputFormat(f, buffer_frames, buffers_total);
+
+        format = *f;
 
         return true;
     }
@@ -222,14 +227,14 @@ namespace PcmSrtreamRenderer
     bool
     Implementation::PutBuffer(PCMDataBuffer::wptr& buffer)
     {
-        bool result = true;
         if (m_state < STATE_STOPPED)
             return false;
 
-        // but filled buffer to the data queue
-        m_inputDataQueue.put(std::move(buffer));
+        // put filled buffer to the data queue
+        if (m_converterInputFlow.expired())
+            return false;
 
-        return result;
+        return m_converterInputFlow.lock()->PutBuffer(std::move(buffer));
     }
 
     bool
@@ -238,7 +243,10 @@ namespace PcmSrtreamRenderer
         if (m_state < STATE_STOPPED)
             return false;
 
-        return m_freeBufffersQueue.get(buffer);
+        if (m_converterInputFlow.expired())
+            return false;
+
+        return m_converterInputFlow.lock()->GetBuffer(buffer);
     }
 
     HRESULT 
@@ -289,7 +297,7 @@ namespace PcmSrtreamRenderer
             const std::streamsize bytes_to_render = frames_to_bytes(frames_to_render);
 
             // copy data
-            memcpy(buffer + offset_bytes, sbuffer->p, bytes_to_render);
+            memcpy(buffer + offset_bytes, sbuffer->p.get(), bytes_to_render);
 
             // reduce the rest of rendering buffer with copied data 
             buffer_frames_rest -= frames_to_render;
@@ -301,7 +309,7 @@ namespace PcmSrtreamRenderer
                 sbuffer->actual_size -= frames_to_bytes(frames_to_render);
 
                 // move kept bytes to the source buffer beginning
-                memmove(sbuffer->p, ((char*)sbuffer->p + frames_to_bytes(frames_to_render)), sbuffer->actual_size);
+                memmove(sbuffer->p.get(), ((char*)sbuffer->p.get() + frames_to_bytes(frames_to_render)), sbuffer->actual_size);
 
                 // keep the buffer separately
                 rendering_partially_processed_buffer = sbuffer;
@@ -456,12 +464,18 @@ namespace PcmSrtreamRenderer
     bool
     Implementation::InternalPutBuffer(std::weak_ptr<PCMDataBuffer>& buffer)
     {
-        return m_freeBufffersQueue.put(buffer);
+        if (m_converterOutputFlow.expired())
+            return false;
+
+        return m_converterOutputFlow.lock()->PutBuffer(buffer);
     }
 
     bool
     Implementation::InternalGetBuffer(std::weak_ptr<PCMDataBuffer>& buffer)
     {
-        return m_inputDataQueue.get(buffer);
+        if (m_converterOutputFlow.expired())
+            return false;
+
+        return m_converterOutputFlow.lock()->GetBuffer(buffer);
     }
 }

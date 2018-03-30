@@ -6,7 +6,14 @@ namespace common
 {
     template<class T> using ComUniquePtr = std::unique_ptr<T, decltype(&CoTaskMemFree)>;
 
-    template<typename T>
+    struct DataFlowInterface
+    {
+        typedef std::weak_ptr<DataFlowInterface> wptr;
+
+        virtual bool GetBuffer(PCMDataBuffer::wptr& p) = 0;
+        virtual bool PutBuffer(PCMDataBuffer::wptr p) = 0;
+    };
+
     class BufferQueue
     {
     public:
@@ -15,7 +22,7 @@ namespace common
         typedef std::chrono::steady_clock::duration duration;
         typedef std::chrono::milliseconds milliseconds;
 
-        bool get(T& t)
+        bool GetBuffer(PCMDataBuffer::wptr& t)
         {
             duration time_to_wait(milliseconds(500));
 
@@ -44,7 +51,7 @@ namespace common
             return true;
         }
 
-        bool put(T t)
+        bool PutBuffer(PCMDataBuffer::wptr t)
         {
             std::unique_lock<decltype(m)> l(m);
 
@@ -56,10 +63,100 @@ namespace common
         }
 
     private:
-        std::queue<T> q;
+        std::queue<PCMDataBuffer::wptr> q;
 
         std::mutex m;
         std::condition_variable cv;
+    };
+
+    class DataFlowPort
+        : public DataFlowInterface
+    {
+    public:
+        DataFlowPort(std::shared_ptr<common::BufferQueue>& inQueue, std::shared_ptr<common::BufferQueue>& outQueue)
+            : m_inQueue(inQueue)
+            , m_outQueue(outQueue)
+        {
+            ;
+        }
+
+        bool GetBuffer(PCMDataBuffer::wptr& p) override
+        {
+            if (!m_inQueue || !m_outQueue)
+                return false;
+
+            return m_inQueue->GetBuffer(p);
+        }
+
+        bool PutBuffer(PCMDataBuffer::wptr p) override
+        {
+            if (!m_inQueue || !m_outQueue)
+                return false;
+
+            m_outQueue->PutBuffer(p);
+
+            return true;
+        }
+
+    protected:
+        std::shared_ptr<common::BufferQueue>         m_inQueue;
+        std::shared_ptr<common::BufferQueue>         m_outQueue;
+    };
+
+    class DataFlow
+    {
+    public:
+
+        ~DataFlow()
+        {
+            ;
+        }
+
+        bool Alloc(const size_t bytes_per_buffer, const size_t buffers)
+        {
+            m_busyBufferQueue.reset(new common::BufferQueue);
+            m_freeBufferQueue.reset(new common::BufferQueue);
+
+            for (size_t c = 0; c < buffers; ++c)
+            {
+                m_bufferStorage.push_back(PCMDataBuffer::sptr(new PCMDataBuffer(new int8_t[bytes_per_buffer]{ 0 }, bytes_per_buffer)));
+                m_freeBufferQueue->PutBuffer(m_bufferStorage.back());
+            }
+            
+
+            m_iPort.reset(new DataFlowPort(/*get*/m_freeBufferQueue, /*put*/m_busyBufferQueue));
+            m_oPort.reset(new DataFlowPort(/*get*/m_busyBufferQueue, /*put*/m_freeBufferQueue));
+
+            return true;
+        }
+
+        bool inputPort(DataFlowInterface::wptr& port)
+        {
+            if (!m_iPort || !m_oPort)
+                return false;
+
+            port = m_iPort;
+
+            return true;
+        }
+
+        bool outputPort(DataFlowInterface::wptr& port)
+        {
+            if (!m_iPort || !m_oPort)
+                return false;
+
+            port = m_oPort;
+
+            return true;
+        }
+
+    protected:
+        std::shared_ptr<DataFlowInterface>   m_iPort;
+        std::shared_ptr<DataFlowInterface>   m_oPort;
+
+        std::shared_ptr<common::BufferQueue> m_busyBufferQueue;
+        std::shared_ptr<common::BufferQueue> m_freeBufferQueue;
+        std::list<PCMDataBuffer::sptr>       m_bufferStorage;
     };
 
     class ThreadInterraptor

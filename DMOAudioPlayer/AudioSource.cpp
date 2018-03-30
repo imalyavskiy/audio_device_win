@@ -241,7 +241,7 @@ namespace WavAudioSource
         // fill buffer
         if(bytes_to_read > 0)
         {   // read data
-            m_source_data.read(reinterpret_cast<char*>(buffer->p), bytes_to_read);
+            m_source_data.read(reinterpret_cast<char*>(buffer->p.get()), bytes_to_read);
 
             // check state
             rdstate = m_source_data.rdstate();

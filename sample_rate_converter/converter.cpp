@@ -87,9 +87,9 @@ bool Converter::convert(PCMDataBuffer& buffer_in, PCMDataBuffer& buffer_out, boo
 
     // copy data
     if (m_format_in.bitsPerSample == 16)        // from input short buffer to proxy float bufer
-        src_short_to_float_array((short*)buffer_in.p, m_float_buffer_in.get(), (int)actual_input_samples);
+        src_short_to_float_array((short*)buffer_in.p.get(), m_float_buffer_in.get(), (int)actual_input_samples);
     else if (m_format_in.bitsPerSample == 32)   // from unput int buffer to proxy float bufer
-        src_int_to_float_array((int*)buffer_in.p, m_float_buffer_in.get(), (int)actual_input_samples);
+        src_int_to_float_array((int*)buffer_in.p.get(), m_float_buffer_in.get(), (int)actual_input_samples);
     else                                        // error
         return false;
 
@@ -113,9 +113,9 @@ bool Converter::convert(PCMDataBuffer& buffer_in, PCMDataBuffer& buffer_out, boo
   
     // copy data
     if (m_format_in.bitsPerSample == 16)        // from proxy float buffer to output short buffer
-        src_float_to_short_array(m_float_buffer_out.get(), (short*)buffer_out.p, src_data.output_frames_gen * m_format_out.channels);
+        src_float_to_short_array(m_float_buffer_out.get(), (short*)buffer_out.p.get(), src_data.output_frames_gen * m_format_out.channels);
     else if (m_format_in.bitsPerSample == 32)   // from proxy float buffer to output int buffer
-        src_float_to_int_array(m_float_buffer_out.get(), (int*)buffer_out.p, src_data.output_frames_gen * m_format_out.channels);
+        src_float_to_int_array(m_float_buffer_out.get(), (int*)buffer_out.p.get(), src_data.output_frames_gen * m_format_out.channels);
     
     // 
     buffer_out.actual_size = src_data.output_frames_gen * m_format_out.bytesPerFrame;
@@ -124,7 +124,7 @@ bool Converter::convert(PCMDataBuffer& buffer_in, PCMDataBuffer& buffer_out, boo
     const uint32_t bytes_consumed = src_data.input_frames_used * m_format_in.bytesPerFrame;
     buffer_in.actual_size -= bytes_consumed;
     if(buffer_in.actual_size != 0) // move unprocessed data if any to the beginning of the input buffer
-        memmove(buffer_in.p, (void*)((char*)buffer_in.p + bytes_consumed), buffer_in.actual_size);
+        memmove(buffer_in.p.get(), (void*)((char*)buffer_in.p.get() + bytes_consumed), buffer_in.actual_size);
 
     return true;
 }

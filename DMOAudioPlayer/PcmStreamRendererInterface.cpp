@@ -1,5 +1,6 @@
 #include "stdafx.h"
 #include "common.h"
+#include "SampleRateConverterInterface.h"
 #include "PcmStreamRendererInterface.h"
 #include "PcmStreamRenderer.h"
 

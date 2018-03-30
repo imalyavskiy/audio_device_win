@@ -24,9 +24,6 @@
     <ClInclude Include="AudioSynth.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="AudioDeviceBuffer.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="PcmStreamRenderer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -46,6 +43,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="DataStream.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SampleRateConverter.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SampleRateConverterInterface.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -75,6 +78,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="DataStream.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SampleRateConverter.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SampleRateConverterInterface.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
