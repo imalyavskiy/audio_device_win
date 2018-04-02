@@ -59,7 +59,7 @@ void Converter::update_proxy_buffers(const PCMDataBuffer& buffer_in, const PCMDa
     if ((!m_float_buffer_out) || (m_last_buffer_out_tsize != buffer_out.total_size))
     {
         const size_t out_buffer_capacity_in_samples 
-            = buffer_in.total_size / (m_format_out.bytesPerFrame / m_format_out.channels);
+            = buffer_out.total_size / (m_format_out.bytesPerFrame / m_format_out.channels);
 
         m_float_buffer_out.reset(new float[out_buffer_capacity_in_samples]);
 
