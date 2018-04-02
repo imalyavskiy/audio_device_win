@@ -7,11 +7,11 @@ namespace SampleRateConverter
     {
         typedef std::shared_ptr<Interface> ptr;
 
-        virtual bool GetInputDataFlow(common::DataFlowInterface::wptr& p) = 0;
-        virtual bool SetInputFormat(std::shared_ptr<const PCMFormat>& format, const size_t buffer_frames, const size_t buffers_total) = 0;
-        virtual bool GetInputFormat(std::shared_ptr<const PCMFormat>& format, size_t& buffer_frames, size_t& buffers_total) const = 0;
+        virtual bool GetInputDataPort(common::DataPortInterface::wptr& p) = 0;
+        virtual bool SetInputFormat(std::shared_ptr<const PCMFormat>& f) = 0;
+        virtual bool GetInputFormat(std::shared_ptr<const PCMFormat>& f) const = 0;
 
-        virtual bool GetOutputDataFlow(common::DataFlowInterface::wptr& p) = 0;
+        virtual bool GetOutputDataPort(common::DataPortInterface::wptr& p) = 0;
         virtual bool SetOutputFormat(std::shared_ptr<const PCMFormat>& f) = 0;
         virtual bool GetOutputFormat(std::shared_ptr<const PCMFormat>& f) const = 0;
     };

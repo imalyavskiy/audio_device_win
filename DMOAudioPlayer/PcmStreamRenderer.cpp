@@ -113,7 +113,7 @@ namespace PcmSrtreamRenderer
     }
 
     bool
-    Implementation::SetFormat(const PCMFormat& format, const size_t buffer_frames, const size_t buffers_total)
+    Implementation::SetFormat(const PCMFormat& format)
     {
         // check state
         assert(m_state == STATE_INITIAL);
@@ -122,14 +122,14 @@ namespace PcmSrtreamRenderer
 
         std::shared_ptr<const PCMFormat> f(new PCMFormat(format));
 
-        m_converter->SetInputFormat(f, buffer_frames, buffers_total);
+        m_converter->SetInputFormat(f);
 
         //
-        if (!m_converter->GetInputDataFlow(m_converterInputFlow))
+        if (!m_converter->GetInputDataPort(m_converterInputPort))
             throw std::exception("Failed to obtain input data flow.");
 
         //
-        if (!m_converter->GetOutputDataFlow(m_converterOutputFlow))
+        if (!m_converter->GetOutputDataPort(m_converterOutputPort))
             throw std::exception("Failed to obtain output data flow.");
 
         m_state = STATE_STOPPED;
@@ -140,14 +140,14 @@ namespace PcmSrtreamRenderer
     }
 
     bool
-    Implementation::GetFormat(PCMFormat& format, size_t& buffer_frames, size_t& buffers_total) const
+    Implementation::GetFormat(PCMFormat& format) const
     {
         if (!m_converter)
             return false;
         
         std::shared_ptr<const PCMFormat> f;
 
-        m_converter->GetInputFormat(f, buffer_frames, buffers_total);
+        m_converter->GetInputFormat(f);
 
         format = *f;
 
@@ -231,10 +231,10 @@ namespace PcmSrtreamRenderer
             return false;
 
         // put filled buffer to the data queue
-        if (m_converterInputFlow.expired())
+        if (m_converterInputPort.expired())
             return false;
 
-        return m_converterInputFlow.lock()->PutBuffer(std::move(buffer));
+        return m_converterInputPort.lock()->PutBuffer(std::move(buffer));
     }
 
     bool
@@ -243,10 +243,10 @@ namespace PcmSrtreamRenderer
         if (m_state < STATE_STOPPED)
             return false;
 
-        if (m_converterInputFlow.expired())
+        if (m_converterInputPort.expired())
             return false;
 
-        return m_converterInputFlow.lock()->GetBuffer(buffer);
+        return m_converterInputPort.lock()->GetBuffer(buffer);
     }
 
     HRESULT 
@@ -464,18 +464,18 @@ namespace PcmSrtreamRenderer
     bool
     Implementation::InternalPutBuffer(std::weak_ptr<PCMDataBuffer>& buffer)
     {
-        if (m_converterOutputFlow.expired())
+        if (m_converterOutputPort.expired())
             return false;
 
-        return m_converterOutputFlow.lock()->PutBuffer(buffer);
+        return m_converterOutputPort.lock()->PutBuffer(buffer);
     }
 
     bool
     Implementation::InternalGetBuffer(std::weak_ptr<PCMDataBuffer>& buffer)
     {
-        if (m_converterOutputFlow.expired())
+        if (m_converterOutputPort.expired())
             return false;
 
-        return m_converterOutputFlow.lock()->GetBuffer(buffer);
+        return m_converterOutputPort.lock()->GetBuffer(buffer);
     }
 }

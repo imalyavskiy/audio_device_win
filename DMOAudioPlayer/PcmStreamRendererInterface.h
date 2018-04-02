@@ -16,8 +16,8 @@ namespace PcmSrtreamRenderer{
         };
 
         // TODO(IM):  replace bool with more meaningful type
-        virtual bool    SetFormat(const PCMFormat& format, const size_t buffer_frames, const size_t buffers_total) = 0;
-        virtual bool    GetFormat(PCMFormat& format, size_t& buffer_frames, size_t& buffers_total) const = 0;
+        virtual bool    SetFormat(const PCMFormat& format) = 0;
+        virtual bool    GetFormat(PCMFormat& format) const = 0;
 
         virtual bool    Start() = 0;
         virtual bool    Stop() = 0;

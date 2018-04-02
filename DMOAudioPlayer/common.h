@@ -6,9 +6,9 @@ namespace common
 {
     template<class T> using ComUniquePtr = std::unique_ptr<T, decltype(&CoTaskMemFree)>;
 
-    struct DataFlowInterface
+    struct DataPortInterface
     {
-        typedef std::weak_ptr<DataFlowInterface> wptr;
+        typedef std::weak_ptr<DataPortInterface> wptr;
 
         virtual bool GetBuffer(PCMDataBuffer::wptr& p) = 0;
         virtual bool PutBuffer(PCMDataBuffer::wptr p) = 0;
@@ -69,11 +69,11 @@ namespace common
         std::condition_variable cv;
     };
 
-    class DataFlowPort
-        : public DataFlowInterface
+    class DataPort
+        : public DataPortInterface
     {
     public:
-        DataFlowPort(std::shared_ptr<common::BufferQueue>& inQueue, std::shared_ptr<common::BufferQueue>& outQueue)
+        DataPort(std::shared_ptr<common::BufferQueue>& inQueue, std::shared_ptr<common::BufferQueue>& outQueue)
             : m_inQueue(inQueue)
             , m_outQueue(outQueue)
         {
@@ -124,13 +124,13 @@ namespace common
             }
             
 
-            m_iPort.reset(new DataFlowPort(/*get*/m_freeBufferQueue, /*put*/m_busyBufferQueue));
-            m_oPort.reset(new DataFlowPort(/*get*/m_busyBufferQueue, /*put*/m_freeBufferQueue));
+            m_iPort.reset(new DataPort(/*get*/m_freeBufferQueue, /*put*/m_busyBufferQueue));
+            m_oPort.reset(new DataPort(/*get*/m_busyBufferQueue, /*put*/m_freeBufferQueue));
 
             return true;
         }
 
-        bool inputPort(DataFlowInterface::wptr& port)
+        bool inputPort(DataPortInterface::wptr& port)
         {
             if (!m_iPort || !m_oPort)
                 return false;
@@ -140,7 +140,7 @@ namespace common
             return true;
         }
 
-        bool outputPort(DataFlowInterface::wptr& port)
+        bool outputPort(DataPortInterface::wptr& port)
         {
             if (!m_iPort || !m_oPort)
                 return false;
@@ -151,8 +151,8 @@ namespace common
         }
 
     protected:
-        std::shared_ptr<DataFlowInterface>   m_iPort;
-        std::shared_ptr<DataFlowInterface>   m_oPort;
+        std::shared_ptr<DataPortInterface>   m_iPort;
+        std::shared_ptr<DataPortInterface>   m_oPort;
 
         std::shared_ptr<common::BufferQueue> m_busyBufferQueue;
         std::shared_ptr<common::BufferQueue> m_freeBufferQueue;

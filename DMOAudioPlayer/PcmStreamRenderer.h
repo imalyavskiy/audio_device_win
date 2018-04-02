@@ -42,10 +42,10 @@ namespace PcmSrtreamRenderer
         bool    Init();
 
         //
-        bool    SetFormat(const PCMFormat& format, const size_t buffer_frames, const size_t buffers_total) override;
+        bool    SetFormat(const PCMFormat& format) override;
 
         //
-        bool    GetFormat(PCMFormat& format, size_t& buffer_frames, size_t& buffers_total) const override;
+        bool    GetFormat(PCMFormat& format) const override;
 
         //
         bool    Stop() override;
@@ -101,10 +101,10 @@ namespace PcmSrtreamRenderer
         std::thread                 m_render_thread;
         
         //
-        common::DataFlowInterface::wptr m_converterInputFlow;
+        common::DataPortInterface::wptr m_converterInputPort;
 
         //
-        common::DataFlowInterface::wptr m_converterOutputFlow;
+        common::DataPortInterface::wptr m_converterOutputPort;
 
         //
         common::ThreadInterraptor   m_thread_interraption;

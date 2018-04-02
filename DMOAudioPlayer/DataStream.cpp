@@ -66,7 +66,7 @@ bool DataStream::Init()
     if (!m_source->GetFormat(file_PCM_format))
         return false;
 
-    if (!m_renderer->SetFormat(file_PCM_format, file_PCM_format.samplesPerSecond / 10, 10))
+    if (!m_renderer->SetFormat(file_PCM_format))
         return false;
 
     return true;
