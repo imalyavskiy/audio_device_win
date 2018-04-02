@@ -2,13 +2,10 @@
 #include "common.h"
 #include "SampleRateConverterInterface.h"
 #include "SampleRateConverter.h"
-namespace SampleRateConverter
+bool create(std::shared_ptr<ISampleRateConverter>& instance)
 {
-    bool create(std::shared_ptr<Interface>& instance)
-    {
-        std::shared_ptr<Implementation> p = std::make_shared<Implementation>();
+    std::shared_ptr<SampleRateConverter> p = std::make_shared<SampleRateConverter>();
 
-        instance = std::static_pointer_cast<Interface>(p);
-        return bool(instance);
-    }
+    instance = std::static_pointer_cast<ISampleRateConverter>(p);
+    return bool(instance);
 }

@@ -47,7 +47,7 @@ void DataStream::DoStream()
     return;
 }
 
-DataStream::DataStream(WavAudioSource::Interface::ptr source, PcmSrtreamRenderer::Interface::ptr renderer) 
+DataStream::DataStream(IWavAudioSource::ptr source, IPcmSrtreamRenderer::ptr renderer) 
     : m_renderer(renderer)
     , m_source(source)
 {

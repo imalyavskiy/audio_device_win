@@ -3,16 +3,14 @@
 #include "AudioSourceInterface.h"
 #include "AudioSource.h"
 
-namespace WavAudioSource{
-    bool create(const std::string& file, std::shared_ptr<Interface>& source)
-    {
-        Implementation* p = new Implementation();
+bool create(const std::string& file, std::shared_ptr<IWavAudioSource>& source)
+{
+    WavAudioSource* p = new WavAudioSource();
 
-        if (!p->Init(file))
-            return false;
+    if (!p->Init(file))
+        return false;
 
-        source.reset(p);
+    source.reset(p);
 
-        return (bool)source;
-    }
+    return (bool)source;
 }

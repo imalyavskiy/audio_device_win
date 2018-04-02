@@ -12,94 +12,91 @@
 <wave-data> )       // Wave data
 */
 
-namespace WavAudioSource
+struct ChunkDescriptor
 {
-    struct ChunkDescriptor
-    {
-        uint32_t fourcc;
-        uint32_t size;
-    };
+    uint32_t fourcc;
+    uint32_t size;
+};
 
-    struct FmtChunk16
-    {
-        uint16_t wFormatTag;
-        uint16_t nChannels;
-        uint32_t nSamplesPerSecond;
-        uint32_t nAvgBytesPerSecond;
-        uint16_t nBlockAlign;
-        uint16_t wBitsPerSample;
-    };
+struct FmtChunk16
+{
+    uint16_t wFormatTag;
+    uint16_t nChannels;
+    uint32_t nSamplesPerSecond;
+    uint32_t nAvgBytesPerSecond;
+    uint16_t nBlockAlign;
+    uint16_t wBitsPerSample;
+};
 
-    struct DataChunk
-    {
-        std::streampos pos_begin = 0;
-        std::streampos pos_end = 0;
-    };
+struct DataChunk
+{
+    std::streampos pos_begin = 0;
+    std::streampos pos_end = 0;
+};
 
-    struct FmtChunk18
-        : FmtChunk16
-    {
-        uint16_t cbSize;
-    };
+struct FmtChunk18
+    : FmtChunk16
+{
+    uint16_t cbSize;
+};
 
-    typedef
-    struct FmtChunk40
-        : FmtChunk18
-    {
-        uint16_t wValidBitsPerSample;
-        uint32_t dwChannelMask;
-        GUID     SubFormat;
-    } FmtChunk;
+typedef
+struct FmtChunk40
+    : FmtChunk18
+{
+    uint16_t wValidBitsPerSample;
+    uint32_t dwChannelMask;
+    GUID     SubFormat;
+} FmtChunk;
 
-    struct CueChunk
-    {
+struct CueChunk
+{
 
-    };
+};
 
-    struct PlaylistChunk
-    {
+struct PlaylistChunk
+{
 
-    };
+};
 
-    struct AssocDataListChunk
-    {
+struct AssocDataListChunk
+{
 
-    };
+};
 
-    struct WaveRiff
-    {
-        std::unique_ptr<FmtChunk>               format_chunk;
-        std::unique_ptr<DataChunk>              data_chunk;
-    };
+struct WaveRiff
+{
+    std::unique_ptr<FmtChunk>               format_chunk;
+    std::unique_ptr<DataChunk>              data_chunk;
+};
 
-    class Implementation
-        : public Interface
-    {
-        friend bool WavAudioSource::create(const std::string& file, std::shared_ptr<Interface>& source);
+class WavAudioSource
+    : public IWavAudioSource
+{
+    friend bool create(const std::string& file, std::shared_ptr<IWavAudioSource>& source);
 
-    public:
-        ~Implementation();
+public:
+    ~WavAudioSource();
 
-    protected:
-        Implementation();
+protected:
+    WavAudioSource();
 
-        bool Init(const std::string& file);
+    bool Init(const std::string& file);
 
-        virtual bool GetFormat(PCMFormat& format) override;
-        virtual bool ReadData(UINT32 bufferFrameCount, BYTE* pData, DWORD* pFlags) override;
-        virtual bool ReadData(std::shared_ptr<PCMDataBuffer> buffer) override;
+    virtual bool GetFormat(PCMFormat& format) override;
+    virtual bool ReadData(UINT32 bufferFrameCount, BYTE* pData, DWORD* pFlags) override;
+    virtual bool ReadData(std::shared_ptr<PCMDataBuffer> buffer) override;
 
-        bool ReadWafeRiff(const std::streampos& begin, const std::streampos& end, std::unique_ptr<WaveRiff>& wave_riff);
-        bool ReadFMTChunk(const std::streampos& begin, const ChunkDescriptor& chunk_descr, std::unique_ptr<FmtChunk>& fmt_chunk);
-        bool ReadDataChunk(const std::streampos& begin, const ChunkDescriptor& chunk_descr, std::unique_ptr<DataChunk>& data_chunk);
+    bool ReadWafeRiff(const std::streampos& begin, const std::streampos& end, std::unique_ptr<WaveRiff>& wave_riff);
+    bool ReadFMTChunk(const std::streampos& begin, const ChunkDescriptor& chunk_descr, std::unique_ptr<FmtChunk>& fmt_chunk);
+    bool ReadDataChunk(const std::streampos& begin, const ChunkDescriptor& chunk_descr, std::unique_ptr<DataChunk>& data_chunk);
 
-    protected:
-        std::ifstream  m_source_data;
-        std::streamoff m_file_size;
+protected:
+    std::ifstream  m_source_data;
+    std::streamoff m_file_size;
 
-        std::unique_ptr<WaveRiff> m_wave_riff;
-    };
-}
+    std::unique_ptr<WaveRiff> m_wave_riff;
+};
 
 #endif // __AUDIO_SOURCE_H__
 
