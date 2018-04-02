@@ -14,7 +14,12 @@ namespace SampleRateConverter
 
     Implementation::~Implementation()
     {
-        ;
+        if (m_convert_thread.joinable())
+        {
+            m_convert_thread_interraptor.activate();
+
+            m_convert_thread.join();
+        }
     }
 
     bool 
