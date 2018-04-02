@@ -23,7 +23,7 @@ RawAudioSource::RawAudioSource(std::mutex* pmtx, int Frequency, Waveforms Wavefo
 
     if (m_SamplesPerSecond == 48000 && m_BitsPerSample == 16 && m_Channels == 2)
     {
-        m_source_data.open("C:\\Users\\developer\\etc\\DMOAudioPlayer\\48000_16bit_2ch_LittleEndian.raw", std::ios_base::in | std::ios_base::binary);
+        m_source_data.open("C:\\Users\\developer\\etc\\audio_device_win\\48000_16bit_2ch_LittleEndian.raw", std::ios_base::in | std::ios_base::binary);
         assert(m_source_data.is_open());
 
         begin = m_source_data.tellg();
