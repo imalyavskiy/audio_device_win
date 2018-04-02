@@ -22,7 +22,7 @@
     <VCProjectVersion>15.0</VCProjectVersion>
     <ProjectGuid>{FEF30D2D-A933-4A94-B02D-1DD02D943AAF}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>DMOAudioPlayer</RootNamespace>
+    <RootNamespace>audio_device_win</RootNamespace>
     <WindowsTargetPlatformVersion>10.0.16299.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -179,7 +179,7 @@
     <ClCompile Include="DataStream.cpp" />
     <ClCompile Include="PcmStreamRendererInterface.cpp" />
     <ClCompile Include="AudioSynth.cpp" />
-    <ClCompile Include="DMOAudioPlayer.cpp" />
+    <ClCompile Include="audio_device_win.cpp" />
     <ClCompile Include="PcmStreamRenderer.cpp" />
     <ClCompile Include="SampleRateConverter.cpp" />
     <ClCompile Include="SampleRateConverterInterface.cpp" />
