@@ -14,18 +14,11 @@ struct IPcmSrtreamRenderer
         STATE_STARTED,
     };
 
-    // TODO(IM):  replace bool with more meaningful type
-    virtual bool    SetFormat(const PCMFormat& format) = 0;
     virtual bool    GetFormat(PCMFormat& format) const = 0;
-
+    virtual bool    SetDataPort(common::DataPortInterface::wptr converter_out) = 0;
     virtual bool    Start() = 0;
     virtual bool    Stop() = 0;
     virtual bool    WaitForCompletion() = 0;
-
-    virtual state   GetState() const = 0;
-    virtual bool    PutBuffer(PCMDataBuffer::wptr& buffer) = 0; // frames == channels * bits_per_sample / 8
-    virtual bool    GetBuffer(PCMDataBuffer::wptr& buffer) = 0;
-
 };
 
 bool create(const std::string& dump_file, std::shared_ptr<IPcmSrtreamRenderer>& instance);

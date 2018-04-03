@@ -11,12 +11,10 @@ public:
 
     // SampleRateConverterInterface
     bool GetInputDataPort(common::DataPortInterface::wptr& p) override;
-    bool SetInputFormat(std::shared_ptr<const PCMFormat>& f) override;
-    bool GetInputFormat(std::shared_ptr<const PCMFormat>& f) const override;
-
     bool GetOutputDataPort(common::DataPortInterface::wptr& p) override;
-    bool SetOutputFormat(std::shared_ptr<const PCMFormat>& f) override;
-    bool GetOutputFormat(std::shared_ptr<const PCMFormat>& f) const override;
+
+    bool SetFormats(const std::shared_ptr<PCMFormat>& in, const std::shared_ptr<PCMFormat>& out) override;
+    bool GetFormats(std::shared_ptr<const PCMFormat>& in, std::shared_ptr<const PCMFormat>& out) const override;
 
 protected:
     bool InitBuffers();
@@ -34,7 +32,7 @@ protected:
     // Output flow
     std::shared_ptr<common::DataFlow> m_output_flow;
 
-    const uint32_t m_buffers_total = 10;
+    const uint32_t m_buffers_total = 1;
 
     std::shared_ptr<ConverterInterface> m_converter_impl;
         

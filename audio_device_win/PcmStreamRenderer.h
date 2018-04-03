@@ -40,25 +40,16 @@ public:
     bool    Init();
 
     //
-    bool    SetFormat(const PCMFormat& format) override;
+    bool    GetFormat(PCMFormat& format) const override;
 
     //
-    bool    GetFormat(PCMFormat& format) const override;
+    bool    SetDataPort(common::DataPortInterface::wptr data_source_port) override;
 
     //
     bool    Stop() override;
 
     //
     bool    WaitForCompletion() override;
-
-    //
-    state   GetState() const override;
-
-    //
-    bool    PutBuffer(PCMDataBuffer::wptr& buffer) override;
-
-    //
-    bool    GetBuffer(PCMDataBuffer::wptr& buffer) override;
 
 protected:
     //
@@ -82,8 +73,6 @@ protected:
     std::mutex                  m_thread_running_mtx;
     std::condition_variable     m_thread_running_cv;
 
-    std::atomic<state>          m_state = STATE_NONE;
-
     UINT32                      m_rendering_buffer_frames_total = 0;
     REFERENCE_TIME              m_rendering_buffer_duration = 0;
 
@@ -94,15 +83,11 @@ protected:
     IAudioClientPtr             m_pAudioClient;
     IAudioRenderClientPtr       m_pRenderClient;
 
-    ISampleRateConverter::ptr   m_converter; // sample rate converter
-
+    //
     std::thread                 m_render_thread;
         
     //
-    common::DataPortInterface::wptr m_converterInputPort;
-
-    //
-    common::DataPortInterface::wptr m_converterOutputPort;
+    common::DataPortInterface::wptr m_data_source_port;
 
     //
     common::ThreadInterraptor   m_thread_interraption;

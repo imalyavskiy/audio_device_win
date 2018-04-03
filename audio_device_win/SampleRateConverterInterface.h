@@ -6,12 +6,10 @@ struct ISampleRateConverter
     typedef std::shared_ptr<ISampleRateConverter> ptr;
 
     virtual bool GetInputDataPort(common::DataPortInterface::wptr& p) = 0;
-    virtual bool SetInputFormat(std::shared_ptr<const PCMFormat>& f) = 0;
-    virtual bool GetInputFormat(std::shared_ptr<const PCMFormat>& f) const = 0;
-
     virtual bool GetOutputDataPort(common::DataPortInterface::wptr& p) = 0;
-    virtual bool SetOutputFormat(std::shared_ptr<const PCMFormat>& f) = 0;
-    virtual bool GetOutputFormat(std::shared_ptr<const PCMFormat>& f) const = 0;
+
+    virtual bool SetFormats(const std::shared_ptr<PCMFormat>& in, const std::shared_ptr<PCMFormat>& out) = 0;
+    virtual bool GetFormats(std::shared_ptr<const PCMFormat>& in, std::shared_ptr<const PCMFormat>& out) const = 0;
 };
 
 bool create(std::shared_ptr<ISampleRateConverter>& instance);

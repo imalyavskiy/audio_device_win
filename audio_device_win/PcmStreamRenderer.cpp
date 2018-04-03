@@ -31,13 +31,6 @@ PcmSrtreamRenderer::Init()
         common::ComUniquePtr<WAVEFORMATEX>  p_mix_format(nullptr, &CoTaskMemFree);
         REFERENCE_TIME              rtRequestedDuration = REFTIMES_PER_SEC * 2;
 
-        if(!create(m_converter))
-            throw std::exception("Failed to create converter instance.");
-
-        // check state
-        if (m_state != STATE_NONE)
-            throw std::exception("Invalid state.");
-
         // create multimedia device enumerator
         hr = CoCreateInstance(__uuidof(MMDeviceEnumerator), NULL, CLSCTX_ALL, __uuidof(IMMDeviceEnumerator), (void**)&m_pEnumerator);
         if (FAILED(hr))
@@ -82,10 +75,6 @@ PcmSrtreamRenderer::Init()
         // keep the rendering format
         m_format_render.reset(new PCMFormat{ p_mix_format->nSamplesPerSec, p_mix_format->nChannels, p_mix_format->wBitsPerSample, p_mix_format->nBlockAlign });
             
-        //
-        bool res = m_converter->SetOutputFormat(m_format_render);
-        assert(res);
-
         // Get the actual size of the allocated buffer.
         hr = m_pAudioClient->GetBufferSize(&m_rendering_buffer_frames_total);
         if (FAILED(hr))
@@ -99,8 +88,7 @@ PcmSrtreamRenderer::Init()
         // calculate rendering buffer total duration
         m_rendering_buffer_duration = (REFERENCE_TIME)((double)REFTIMES_PER_SEC * m_rendering_buffer_frames_total) / m_format_render->samplesPerSecond;
 
-        // update state - we are ready to consume data
-        m_state = STATE_INITIAL;
+        Start();
     }
     catch (std::exception e)
     {
@@ -111,45 +99,11 @@ PcmSrtreamRenderer::Init()
 }
 
 bool
-PcmSrtreamRenderer::SetFormat(const PCMFormat& format)
-{
-    // check state
-    assert(m_state == STATE_INITIAL);
-    if (m_state != STATE_INITIAL)
-        return false;
-
-    std::shared_ptr<const PCMFormat> f(new PCMFormat(format));
-
-    m_converter->SetInputFormat(f);
-
-    //
-    if (!m_converter->GetInputDataPort(m_converterInputPort))
-        throw std::exception("Failed to obtain input data flow.");
-
-    //
-    if (!m_converter->GetOutputDataPort(m_converterOutputPort))
-        throw std::exception("Failed to obtain output data flow.");
-
-    m_state = STATE_STOPPED;
-
-    Start();
-
-    return true;
-}
-
-bool
 PcmSrtreamRenderer::GetFormat(PCMFormat& format) const
 {
-    if (!m_converter)
-        return false;
-        
-    std::shared_ptr<const PCMFormat> f;
+    format = *m_format_render;
 
-    m_converter->GetInputFormat(f);
-
-    format = *f;
-
-    return true;
+    return (bool)m_format_render;
 }
 
 bool
@@ -157,34 +111,29 @@ PcmSrtreamRenderer::Start()
 {
     HRESULT hr = S_OK;
 
-    // check state
-    assert(m_state == STATE_STOPPED);
-    if (m_state != STATE_STOPPED)
-        return false;
-
     // run rendering worker thread
     std::unique_lock<std::mutex> l(m_thread_running_mtx);
     m_render_thread = std::thread(std::bind(&PcmSrtreamRenderer::DoRender, this));
     m_thread_running_cv.wait(l);
 
-    // update state
-    m_state = STATE_STARTED;
-
     return true;
+}
+
+bool
+PcmSrtreamRenderer::SetDataPort(common::DataPortInterface::wptr data_source_port)
+{
+    if (data_source_port.expired())
+        return false;
+
+    m_data_source_port = data_source_port;
+
+    return !m_data_source_port.expired();
 }
 
 bool
 PcmSrtreamRenderer::Stop()
 {
     HRESULT hr = S_OK;
-
-    if (m_state == STATE_STOPPED)
-        return true;
-
-    // check state
-    assert(m_state == STATE_STARTED);
-    if (m_state != STATE_STARTED)
-        return false;
 
     // once rendering thread has been run
     if (m_render_thread.joinable())
@@ -193,9 +142,6 @@ PcmSrtreamRenderer::Stop()
 
         m_render_thread.join();
     }
-
-    // update state
-    m_state = STATE_STOPPED;
 
     return true;
 }
@@ -214,37 +160,6 @@ PcmSrtreamRenderer::WaitForCompletion()
     m_render_thread.join();
 
     return r;
-}
-
-PcmSrtreamRenderer::state
-PcmSrtreamRenderer::GetState() const
-{
-    return m_state;
-}
-
-bool
-PcmSrtreamRenderer::PutBuffer(PCMDataBuffer::wptr& buffer)
-{
-    if (m_state < STATE_STOPPED)
-        return false;
-
-    // put filled buffer to the data queue
-    if (m_converterInputPort.expired())
-        return false;
-
-    return m_converterInputPort.lock()->PutBuffer(std::move(buffer));
-}
-
-bool
-PcmSrtreamRenderer::GetBuffer(PCMDataBuffer::wptr& buffer)
-{
-    if (m_state < STATE_STOPPED)
-        return false;
-
-    if (m_converterInputPort.expired())
-        return false;
-
-    return m_converterInputPort.lock()->GetBuffer(buffer);
 }
 
 HRESULT 
@@ -462,18 +377,18 @@ PcmSrtreamRenderer::DoRender()
 bool
 PcmSrtreamRenderer::InternalPutBuffer(std::weak_ptr<PCMDataBuffer>& buffer)
 {
-    if (m_converterOutputPort.expired())
+    if (m_data_source_port.expired())
         return false;
 
-    return m_converterOutputPort.lock()->PutBuffer(buffer);
+    return m_data_source_port.lock()->PutBuffer(buffer);
 }
 
 bool
 PcmSrtreamRenderer::InternalGetBuffer(std::weak_ptr<PCMDataBuffer>& buffer)
 {
-    if (m_converterOutputPort.expired())
+    if (m_data_source_port.expired())
         return false;
 
-    return m_converterOutputPort.lock()->GetBuffer(buffer);
+    return m_data_source_port.lock()->GetBuffer(buffer);
 }
 

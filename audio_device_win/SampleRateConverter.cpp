@@ -30,32 +30,6 @@ SampleRateConverter::GetInputDataPort(common::DataPortInterface::wptr& p)
 }
 
 bool 
-SampleRateConverter::SetInputFormat(std::shared_ptr<const PCMFormat>& f)
-{
-    // keep format input format data
-    if (!f)
-        return false;
-        
-    m_format_input = f;
-
-    if (m_format_output && InitBuffers())
-        return InitConversion();
-
-    return true;
-}
-
-bool 
-SampleRateConverter::GetInputFormat(std::shared_ptr<const PCMFormat>& format) const
-{
-    if (!m_format_input)
-        return false;
-        
-    format = m_format_input;
-
-    return true;
-}
-
-bool 
 SampleRateConverter::GetOutputDataPort(common::DataPortInterface::wptr& p)
 {
     if (!m_output_flow->outputPort(p))
@@ -65,28 +39,31 @@ SampleRateConverter::GetOutputDataPort(common::DataPortInterface::wptr& p)
 }
 
 bool 
-SampleRateConverter::SetOutputFormat(std::shared_ptr<const PCMFormat>& f)
+SampleRateConverter::SetFormats(const std::shared_ptr<PCMFormat>& in, const std::shared_ptr<PCMFormat>& out)
 {
-    if (!f)
+    // keep format input format data
+    if (!in || !out)
         return false;
         
-    m_format_output = f;
+    m_format_input = in;
+    m_format_output = out;
 
-    if (m_format_input && InitBuffers())
-        return InitConversion();
-
+    if (!InitBuffers())
+        return false;
+    
     return true;
 }
 
 bool 
-SampleRateConverter::GetOutputFormat(std::shared_ptr<const PCMFormat>& f) const
+SampleRateConverter::GetFormats(std::shared_ptr<const PCMFormat>& in, std::shared_ptr<const PCMFormat>& out) const
 {
-    if (!m_format_output)
+    if (!m_format_input || !m_format_output)
         return false;
         
-    f = m_format_output;
+    in = m_format_input;
+    out = m_format_output;
 
-    return (bool)f;
+    return true;
 }
 
 bool SampleRateConverter::InitBuffers()
@@ -108,7 +85,7 @@ bool SampleRateConverter::InitBuffers()
     if (!m_output_flow->Alloc(output_buffer_size, m_buffers_total))
         return false;
 
-    return true;
+    return InitConversion();
 }
 
 bool SampleRateConverter::InitConversion()

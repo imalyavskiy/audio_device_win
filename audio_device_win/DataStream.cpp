@@ -1,7 +1,8 @@
 #include "stdafx.h"
 #include "common.h"
-#include "PcmStreamRendererInterface.h"
 #include "AudioSourceInterface.h"
+#include "SampleRateConverterInterface.h"
+#include "PcmStreamRendererInterface.h"
 #include "DataStream.h"
 
 void DataStream::DoStream()
@@ -12,11 +13,15 @@ void DataStream::DoStream()
         std::unique_lock<std::mutex> l(m_stream_thread_mtx);
         m_stream_thread_cv.notify_all();
     }
+    
+    common::DataPortInterface::wptr converter_in;
+    if (!m_converter->GetInputDataPort(converter_in))
+        assert(false);
 
     do
     {
         do {
-            if (!m_renderer->GetBuffer(wbuffer))
+            if (!converter_in.lock()->GetBuffer(wbuffer))
                 continue;
             else
                 break;
@@ -29,7 +34,7 @@ void DataStream::DoStream()
         if (!m_source->ReadData(sbuffer))
             break;
 
-        if (!m_renderer->PutBuffer(wbuffer))
+        if (!converter_in.lock()->PutBuffer(wbuffer))
             break;
 
     } while (!m_interraptor.wait());
@@ -47,8 +52,9 @@ void DataStream::DoStream()
     return;
 }
 
-DataStream::DataStream(IWavAudioSource::ptr source, IPcmSrtreamRenderer::ptr renderer) 
+DataStream::DataStream(IWavAudioSource::ptr source, ISampleRateConverter::ptr converter, IPcmSrtreamRenderer::ptr renderer)
     : m_renderer(renderer)
+    , m_converter(converter)
     , m_source(source)
 {
     ;
@@ -61,12 +67,24 @@ DataStream::~DataStream()
 
 bool DataStream::Init()
 {
-    PCMFormat file_PCM_format{ 0,0,0,0 };
+    std::shared_ptr<PCMFormat> src_PCM_format(new PCMFormat{ 0, 0, 0, 0 });
+    std::shared_ptr<PCMFormat> dst_PCM_format(new PCMFormat{ 0, 0, 0, 0 });
 
-    if (!m_source->GetFormat(file_PCM_format))
+    common::DataPortInterface::wptr converter_out;
+
+    if (!m_source->GetFormat(*src_PCM_format))
         return false;
 
-    if (!m_renderer->SetFormat(file_PCM_format))
+    if (!m_renderer->GetFormat(*dst_PCM_format))
+        return false;
+
+    if (!m_converter->SetFormats(src_PCM_format, dst_PCM_format))
+        return false;
+
+    if (!m_converter->GetOutputDataPort(converter_out))
+        return false;
+
+    if(!m_renderer->SetDataPort(converter_out))
         return false;
 
     return true;

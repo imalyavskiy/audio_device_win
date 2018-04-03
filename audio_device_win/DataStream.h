@@ -7,7 +7,7 @@ class DataStream
     void DoStream();
 
 public:
-    DataStream(IWavAudioSource::ptr source, IPcmSrtreamRenderer::ptr renderer);
+    DataStream(IWavAudioSource::ptr source, ISampleRateConverter::ptr converter, IPcmSrtreamRenderer::ptr renderer);
 
     ~DataStream();
 
@@ -27,6 +27,8 @@ protected:
 
     IWavAudioSource::ptr                m_source;
     
+    ISampleRateConverter::ptr           m_converter;
+
     IPcmSrtreamRenderer::ptr            m_renderer;
 
     common::ThreadInterraptor           m_interraptor;
