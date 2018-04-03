@@ -23,7 +23,6 @@ Converter::Converter(const PCMFormat& format_in, const PCMFormat& format_out)
     , m_conversion_ratio((double)format_out.samplesPerSecond / (double)format_in.samplesPerSecond)
 {
     // only samples per second can differ
-    assert(format_in.bitsPerSample == format_out.bitsPerSample);
     assert(format_in.channels == format_out.channels);
 }
 
@@ -70,8 +69,6 @@ void Converter::update_proxy_buffers(const PCMDataBuffer& buffer_in, const PCMDa
 bool Converter::convert(PCMDataBuffer& buffer_in, PCMDataBuffer& buffer_out, bool no_more_data)
 {
     // only samples per second can differ
-    if (m_format_in.bitsPerSample != m_format_out.bitsPerSample)
-        return false;
     if (m_format_in.channels != m_format_out.channels)
         return false;
 
@@ -112,9 +109,9 @@ bool Converter::convert(PCMDataBuffer& buffer_in, PCMDataBuffer& buffer_out, boo
         return false;
   
     // copy data
-    if (m_format_in.bitsPerSample == 16)        // from proxy float buffer to output short buffer
+    if (m_format_out.bitsPerSample == 16)        // from proxy float buffer to output short buffer
         src_float_to_short_array(m_float_buffer_out.get(), (short*)buffer_out.p.get(), src_data.output_frames_gen * m_format_out.channels);
-    else if (m_format_in.bitsPerSample == 32)   // from proxy float buffer to output int buffer
+    else if (m_format_out.bitsPerSample == 32)   // from proxy float buffer to output int buffer
         src_float_to_int_array(m_float_buffer_out.get(), (int*)buffer_out.p.get(), src_data.output_frames_gen * m_format_out.channels);
     
     // 
