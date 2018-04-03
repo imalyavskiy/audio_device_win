@@ -90,6 +90,7 @@
     <LinkIncremental>false</LinkIncremental>
     <OutDir>$(SolutionDir)_bin\$(PlatformShortName)\$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)_int\$(ProjectName)\$(PlatformShortName)\$(Configuration)\</IntDir>
+    <IncludePath>$(SolutionDir)libsamplerate;$(SolutionDir)libsamplerate\src;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>

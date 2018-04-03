@@ -67,8 +67,8 @@ DataStream::~DataStream()
 
 bool DataStream::Init()
 {
-    std::shared_ptr<PCMFormat> src_PCM_format(new PCMFormat{ 0, 0, 0, 0 });
-    std::shared_ptr<PCMFormat> dst_PCM_format(new PCMFormat{ 0, 0, 0, 0 });
+    std::shared_ptr<PCMFormat> src_PCM_format(new PCMFormat{ PCMFormat::uns, 0, 0, 0, 0 });
+    std::shared_ptr<PCMFormat> dst_PCM_format(new PCMFormat{ PCMFormat::uns, 0, 0, 0, 0 });
 
     common::DataPortInterface::wptr converter_out;
 

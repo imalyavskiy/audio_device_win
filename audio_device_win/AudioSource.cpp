@@ -167,9 +167,20 @@ WavAudioSource::GetFormat(PCMFormat& format)
 {
     if (!m_wave_riff->format_chunk || !m_wave_riff->data_chunk)
         return SUCCEEDED(E_FAIL);
+    
+    PCMFormat::sample_format sample_format = PCMFormat::uns;
+    
+    switch(m_wave_riff->format_chunk->wBitsPerSample)
+    {
+    case 8:  sample_format = PCMFormat::ui8; break;
+    case 24: sample_format = PCMFormat::i24; break;
+    case 16: sample_format = PCMFormat::i16; break;
+    case 32: sample_format = PCMFormat::i32; break;
+    }
 
     PCMFormat f
     {
+        sample_format,
         m_wave_riff->format_chunk->nSamplesPerSecond,
         m_wave_riff->format_chunk->nChannels,
         m_wave_riff->format_chunk->wBitsPerSample,

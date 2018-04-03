@@ -54,7 +54,7 @@ PcmSrtreamRenderer::Init()
                 throw std::exception("Failed to get mix format.");
 
             WAVEFORMATEXTENSIBLE* pext = reinterpret_cast<WAVEFORMATEXTENSIBLE*>(mix_format);
-            pext->SubFormat = KSDATAFORMAT_SUBTYPE_PCM;
+//            pext->SubFormat = KSDATAFORMAT_SUBTYPE_PCM;
 
             p_mix_format = common::ComUniquePtr<WAVEFORMATEX>{ mix_format, &CoTaskMemFree };
 
@@ -62,6 +62,24 @@ PcmSrtreamRenderer::Init()
             hr = m_pAudioClient->IsFormatSupported(AUDCLNT_SHAREMODE_SHARED, mix_format, &closest_format);
             if (closest_format)
                 CoTaskMemFree(closest_format);
+
+            PCMFormat::sample_format sample_format = PCMFormat::uns;
+            if(pext->SubFormat == KSDATAFORMAT_SUBTYPE_PCM){
+                switch (p_mix_format->wBitsPerSample)
+                {
+                case 8:  sample_format = PCMFormat::ui8; break;
+                case 24: sample_format = PCMFormat::i24; break;
+                case 16: sample_format = PCMFormat::i16; break;
+                case 32: sample_format = PCMFormat::i32; break;
+                }
+            }
+            else if (pext->SubFormat == KSDATAFORMAT_SUBTYPE_IEEE_FLOAT)
+            {
+                sample_format = PCMFormat::flt;
+            }
+
+            // keep the rendering format
+            m_format_render.reset(new PCMFormat{ sample_format, p_mix_format->nSamplesPerSec, p_mix_format->nChannels, p_mix_format->wBitsPerSample, p_mix_format->nBlockAlign });
 
             if (FAILED(hr))
                 throw std::exception("Failed to check is proposed format supported.");
@@ -72,9 +90,6 @@ PcmSrtreamRenderer::Init()
         if (FAILED(hr))
             throw std::exception("Failed to initialize default audio rendering endpoint.");
 
-        // keep the rendering format
-        m_format_render.reset(new PCMFormat{ p_mix_format->nSamplesPerSec, p_mix_format->nChannels, p_mix_format->wBitsPerSample, p_mix_format->nBlockAlign });
-            
         // Get the actual size of the allocated buffer.
         hr = m_pAudioClient->GetBufferSize(&m_rendering_buffer_frames_total);
         if (FAILED(hr))

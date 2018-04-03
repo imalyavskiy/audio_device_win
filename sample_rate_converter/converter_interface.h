@@ -4,18 +4,30 @@
 
 struct PCMFormat
 {
+    enum sample_format
+    {
+        uns = 0, // unspecified
+        flt = 1, // ieee 754 float
+        ui8 = 2, // unsigned int 8
+        i16 = 3, // signed int 16
+        i24 = 4, // signed int 24
+        i32 = 5, // signed int 32
+    };
+
     bool operator ==(const PCMFormat& other) const
     {
-        return samplesPerSecond == other.samplesPerSecond &&
+        return sampleFormat == other.sampleFormat &&
+               samplesPerSecond == other.samplesPerSecond &&
                channels == other.channels &&
                bitsPerSample == other.bitsPerSample &&
                bytesPerFrame == other.bytesPerFrame;
     }
 
-    uint32_t samplesPerSecond;
-    uint16_t channels;
-    uint32_t bitsPerSample;
-    uint32_t bytesPerFrame;
+    sample_format sampleFormat;
+    uint32_t      samplesPerSecond;
+    uint16_t      channels;
+    uint32_t      bitsPerSample;
+    uint32_t      bytesPerFrame;
 };
 
 struct PCMDataBuffer
